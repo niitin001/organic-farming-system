@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About Us - Farmer Friendly</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: #f5fff5;
+    }
+
+    .about-hero {
+      background: #2e8b57;
+      color: white;
+      padding: 60px 20px;
+      text-align: center;
+    }
+
+    .about-hero h1 {
+      font-size: 42px;
+      margin-bottom: 15px;
+      font-weight: 700;
+    }
+
+    .about-hero p {
+      font-size: 18px;
+      max-width: 600px;
+      margin: 0 auto;
+      opacity: 0.95;
+    }
+
+    .about-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 60px 20px;
+    }
+
+    .section {
+      margin-bottom: 50px;
+    }
+
+    .section h2 {
+      color: #2e8b57;
+      font-size: 32px;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid #2e8b57;
+    }
+
+    .section p {
+      color: #555;
+      line-height: 1.8;
+      font-size: 16px;
+      margin-bottom: 15px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 30px;
+      margin-top: 30px;
+    }
+
+    .feature-card {
+      background: #f0f9f0;
+      padding: 30px;
+      border-radius: 10px;
+      border-left: 5px solid #2e8b57;
+      transition: 0.3s;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 15px rgba(46, 139, 87, 0.2);
+    }
+
+    .feature-card h3 {
+      color: #2e8b57;
+      font-size: 22px;
+      margin-bottom: 12px;
+    }
+
+    .feature-card p {
+      margin: 0;
+      color: #666;
+      font-size: 15px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      background: #f0f9f0;
+      padding: 40px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .stat-item h3 {
+      color: #2e8b57;
+      font-size: 36px;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    .stat-item p {
+      color: #666;
+      margin: 0;
+      font-size: 14px;
+    }
+
+    .mission-vision {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-top: 30px;
+    }
+
+    .mission-box, .vision-box {
+      background: #f0f9f0;
+      padding: 30px;
+      border-radius: 10px;
+      border-top: 5px solid #2e8b57;
+    }
+
+    .mission-box h3, .vision-box h3 {
+      color: #2e8b57;
+      font-size: 24px;
+      margin-bottom: 15px;
+    }
+
+    .team-section {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      margin-top: 30px;
+    }
+
+    .team-section h2 {
+      color: #2e8b57;
+      font-size: 32px;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid #2e8b57;
+    }
+
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 30px;
+      margin-top: 30px;
+    }
+
+    .team-member {
+      text-align: center;
+      padding: 20px;
+      background: #f0f9f0;
+      border-radius: 10px;
+      transition: 0.3s;
+    }
+
+    .team-member:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 5px 12px rgba(46, 139, 87, 0.15);
+    }
+
+    .team-member .emoji {
+      font-size: 60px;
+      margin-bottom: 15px;
+    }
+
+    .team-member h4 {
+      color: #2e8b57;
+      margin-bottom: 5px;
+    }
+
+    .team-member p {
+      margin: 0;
+      font-size: 13px;
+      color: #666;
+    }
+
+    .cta-button {
+      display: inline-block;
+      background: #2e8b57;
+      color: white;
+      padding: 12px 30px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      margin-top: 20px;
+      transition: 0.3s;
+    }
+
+    .cta-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(46, 139, 87, 0.3);
+    }
+
+    @media (max-width: 768px) {
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .mission-vision {
+        grid-template-columns: 1fr;
+      }
+
+      .team-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .about-hero h1 {
+        font-size: 28px;
+      }
+
+      .section h2 {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="logo">Farmer Friendly 🌿</div>
+      <nav>
+        <a href="index.html">HOME</a>
+        <a href="about.html" class="active">ABOUT</a>
+        <a href="crop-guide.html">CROP GUIDE</a>
+        <a href="purchase.html">PURCHASE</a>
+        <a href="weather.html">WEATHER</a>
+        <a href="contact.html">CONTACT</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="about-hero">
+    <h1>About Farmer Friendly</h1>
+    <p>Your trusted partner for organic farming - A blend of modern technology and traditional knowledge</p>
+  </div>
+
+  <div class="about-container">
+    <!-- Our Mission & Vision Section -->
+    <div class="section">
+      <h2>Our Purpose</h2>
+      <div class="mission-vision">
+        <div class="mission-box">
+          <h3>🎯 Our Mission</h3>
+          <p>To provide farmers with all necessary resources, information, and assistance for organic farming. We are committed to making agriculture more profitable, environmentally friendly, and sustainable.</p>
+        </div>
+        <div class="vision-box">
+          <h3>👁️ Our Vision</h3>
+          <p>To build an India where every farmer can double their income by using modern technology. To make organic farming mainstream and ensure healthy food production across the nation.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Statistics Section -->
+    <div class="section">
+      <h2>Our Statistics</h2>
+      <div class="stats">
+        <div class="stat-item">
+          <h3>50,000+</h3>
+          <p>Active Farmer Users</p>
+        </div>
+        <div class="stat-item">
+          <h3>1000+</h3>
+          <p>Villages Covered</p>
+        </div>
+        <div class="stat-item">
+          <h3>95%</h3>
+          <p>Satisfaction Rate</p>
+        </div>
+        <div class="stat-item">
+          <h3>24/7</h3>
+          <p>Support Service</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="section">
+      <h2>Our Features</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <h3>🌾 Crop Guidance</h3>
+          <p>Get complete information for Kharif, Rabi, and Zaid crops with seasonal advice tailored to your needs.</p>
+        </div>
+        <div class="feature-card">
+          <h3>🌱 Soil Testing</h3>
+          <p>Know your soil quality and get assistance in choosing the right fertilizers for your fields.</p>
+        </div>
+        <div class="feature-card">
+          <h3>🛒 Online Shopping</h3>
+          <p>Buy seeds, fertilizers, and agricultural tools directly from home at the best prices available.</p>
+        </div>
+        <div class="feature-card">
+          <h3>🌡️ Weather Forecast</h3>
+          <p>Get detailed weather forecasts for your region and agricultural advice based on weather patterns.</p>
+        </div>
+        <div class="feature-card">
+          <h3>💰 Payment Solutions</h3>
+          <p>Secure and easy payment options for all your agricultural needs and purchases.</p>
+        </div>
+        <div class="feature-card">
+          <h3>📞 Farmer Support</h3>
+          <p>Expert agricultural consultants ready 24/7 to answer all your farming questions and concerns.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Team Section -->
+    <div class="team-section">
+      <h2>Our Team</h2>
+      <div class="team-grid">
+        <div class="team-member">
+          <div class="emoji">👨‍💼</div>
+          <h4>Nitil Kumar</h4>
+          <p>Founder and Chief Executive Officer</p>
+        </div>
+        <div class="team-member">
+          <div class="emoji">👨‍💻</div>
+          <h4>Aakash patel</h4>
+          <p>Agricultural Expert and Consultant</p>
+        </div>
+        <div class="team-member">
+          <div class="emoji">👨‍💻</div>
+          <h4>Deepesh lodhi</h4>
+          <p>Technical Director</p>
+        </div>
+         <div class="team-member">
+          <div class="emoji">👨‍💻</div>
+          <h4>Ateet neti</h4>
+          <p>Agricultural Expert and Consultant</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact CTA -->
+    <div class="section" style="text-align: center; padding: 40px; background: #f0f9f0; border-radius: 10px;">
+      <h2>Join Us Today</h2>
+      <p>If you have any questions or want to work with us, please get in touch with our team.</p>
+      <a href="contact.html" class="cta-button">Contact Us</a>
+    </div>
+  </div>
+
+  <script>
+    // Show logout button if user is logged in
+    window.addEventListener('load', function() {
+      const user = localStorage.getItem('user');
+      const logoutBtn = document.getElementById('logoutBtn');
+      if (user && logoutBtn) {
+        logoutBtn.style.display = 'inline-block';
+        logoutBtn.addEventListener('click', function() {
+          localStorage.removeItem('user');
+          location.href = 'index.html';
+        });
+      }
+    });
+  </script>
+</body>
+</html>

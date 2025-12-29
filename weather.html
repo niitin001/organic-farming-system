@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Weather - Farmer Friendly</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background: linear-gradient(to bottom right, #a8e6cf, #dcedc1);
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      color: #2e3d29;
+      text-align: center;
+    }
+
+    header {
+      background: linear-gradient(90deg, #2e8b57, #3cb371);
+      padding: 20px 0;
+      color: #fff;
+      font-size: 28px;
+      font-weight: bold;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    nav a {
+      text-decoration: none;
+      color: #fff;
+      margin: 0 12px;
+      font-weight: 500;
+      padding: 6px 10px;
+      border-radius: 6px;
+      transition: 0.3s;
+    }
+
+    nav a:hover, nav a.active {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .weather-container {
+      max-width: 400px;
+      margin: 80px auto;
+      padding: 25px;
+      background: #ffffffcc;
+      border-radius: 16px;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+    }
+
+    h2 {
+      color: #2e8b57;
+      margin-bottom: 15px;
+    }
+
+    input {
+      padding: 10px;
+      width: 70%;
+      border: 2px solid #2e8b57;
+      border-radius: 8px;
+      font-size: 16px;
+      outline: none;
+    }
+
+    button {
+      padding: 10px 16px;
+      background: #2e8b57;
+      border: none;
+      color: white;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: #3cb371;
+    }
+
+    .result {
+      margin-top: 25px;
+      font-size: 18px;
+      font-weight: 500;
+    }
+
+    footer {
+      background: linear-gradient(90deg, #2e8b57, #3cb371);
+      color: #fff;
+      padding: 20px 0;
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      font-size: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="header-inner">
+      <div class="logo">Farmer Friendly 🌿</div>
+      <div>
+        <nav style="display:inline-block">
+          <a href="index.html">HOME</a>
+          <a href="about.html">ABOUT</a>
+          <a href="crop-guide.html">CROP GUIDE</a>
+          <a href="purchase.html">PURCHASE</a>
+          <a href="weather.html" class="active">WEATHER</a>
+          <a href="contact.html">CONTACT</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Weather Section -->
+  <div class="weather-container">
+    <h2>☀️ Weather Checker</h2>
+    <p>Enter your city name below 👇</p>
+    <input type="text" id="cityInput" placeholder="e.g. Bhopal, Delhi">
+    <button onclick="getWeather()">Check</button>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <footer>
+    <p>Email: lodhinitin2005@gmail.com | Phone: 9755952808 / 9406558405</p>
+  </footer>
+
+  <script>
+    async function getWeather() {
+      const city = document.getElementById("cityInput").value.trim();
+      const resultDiv = document.getElementById("result");
+
+      if (!city) {
+        resultDiv.innerHTML = "⚠️ Please enter a city name.";
+        return;
+      }
+
+      const apiKey = "8c3634b6dc10170f96b2aea8394a6a2f"; 
+      const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
+
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.cod === "404") {
+          resultDiv.innerHTML = "❌ City not found. Try again!";
+          return;
+        }
+
+        resultDiv.innerHTML = `
+          <h3>🌍 ${data.name}, ${data.sys.country}</h3>
+          <p>🌡️ Temperature: <b>${data.main.temp}°C</b></p>
+          <p>💧 Humidity: <b>${data.main.humidity}%</b></p>
+          <p>🌤️ Condition: <b>${data.weather[0].description}</b></p>
+        `;
+      } catch (error) {
+        resultDiv.innerHTML = "⚠️ Error fetching data. Please try again.";
+      }
+    }
+  </script>
+
+</body>
+</html>

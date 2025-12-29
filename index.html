@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Farmer Friendly</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background: #f5fff5;
+    }
+
+    header {
+      background: #2e8b57;
+      color: white;
+      padding: 15px 0;
+      text-align: center;
+    }
+
+    .header-inner{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      max-width:1100px;
+      margin:0 auto;
+      padding:0 16px;
+    }
+
+    .logo {
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    nav {
+      margin-top: 10px;
+    }
+
+    nav a {
+      color: white;
+      text-decoration: none;
+      margin: 0 15px;
+      font-size: 17px;
+      padding: 6px 12px;
+      border-radius: 5px;
+    }
+
+    nav a:hover, nav a.active {
+      background: rgba(255,255,255,0.2);
+    }
+
+    /* Slider */
+    .slider {
+      width: 100%;
+      height: 340px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .slides img {
+      width: 100%;
+      height: 340px;
+      object-fit: cover;
+      display: none;
+    }
+
+    .slides img.active {
+      display: block;
+    }
+
+    .dots {
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .dot {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      background: #bbb;
+      border-radius: 50%;
+      margin: 5px;
+      cursor: pointer;
+    }
+
+    .dot.active {
+      background: #2e8b57;
+    }
+
+    /* About Section */
+    .about {
+      padding: 30px;
+      text-align: center;
+      background: white;
+    }
+
+    .about h2 {
+      color: #2e8b57;
+      font-size: 30px;
+    }
+
+    .about p {
+      max-width: 750px;
+      margin: auto;
+      font-size: 17px;
+      line-height: 1.7;
+    }
+
+    /* Cards */
+    .features {
+      padding: 20px;
+      text-align: center;
+    }
+
+    .cards {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    .card {
+      width: 260px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      text-decoration: none;
+      color: black;
+      overflow: hidden;
+      transition: 0.3s;
+    }
+
+    .card img {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+    }
+
+    .card-title {
+      padding: 10px;
+      font-size: 18px;
+      color: #2e8b57;
+      font-weight: bold;
+    }
+
+    .card:hover {
+      transform: scale(1.05);
+    }
+
+    /* Footer */
+    .footer {
+      background: #2e8b57;
+      color: white;
+      text-align: center;
+      padding: 15px;
+      margin-top: 40px;
+    }
+
+    .social a {
+      color: white;
+      margin: 0 10px;
+      font-size: 20px;
+      text-decoration: none;
+    }
+
+    /* Auth overlay (blocks site until login/signup) */
+    .auth-overlay{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,0.45);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index:9999;
+    }
+    .auth-card{
+      background:#fff;
+      border-radius:10px;
+      width:100%;
+      max-width:420px;
+      padding:20px;
+      box-shadow:0 10px 40px rgba(0,0,0,0.35);
+    }
+    .auth-card h2{margin:0 0 8px;color:#2e8b57}
+    .auth-card label{display:block;font-size:13px;color:#555;margin:10px 0 6px}
+    .auth-card input{width:100%;padding:10px;border-radius:8px;border:1px solid #e6ede6;font-size:15px}
+    .auth-card .btn{margin-top:12px;background:#2e8b57;color:#fff;padding:10px;border-radius:8px;border:0;cursor:pointer;font-weight:600;width:100%}
+    .auth-card .link{background:none;border:0;color:#2e8b57;cursor:pointer;padding:0;margin-left:6px}
+    .auth-small{font-size:13px;color:#666;margin-top:8px;text-align:center}
+    .auth-msg{font-size:14px;color:green;margin-top:10px;text-align:center}
+    .auth-err{font-size:14px;color:#d9534f;margin-top:10px;text-align:center}
+
+    @media (max-width:880px){
+      .header-inner{padding:0 12px}
+    }
+  </style>
+</head>
+
+
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="header-inner">
+      <div class="logo">Farmer Friendly 🌿</div>
+      <div>
+        <nav style="display:inline-block">
+          <a href="index.html" class="active">HOME</a>
+          <a href="about.html">ABOUT</a>
+          <a href="crop-guide.html">CROP GUIDE</a>
+          <a href="purchase.html">PURCHASE</a>
+          <a href="weather.html">WEATHER</a>
+          <a href="contact.html">CONTACT</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Slider -->
+  <div class="slider" id="slider" aria-hidden="false">
+    <div class="slides">
+      <img src="https://i.ytimg.com/vi/lRyXlvIJFWI/maxresdefault.jpg" class="slide active" alt="">
+      <img src="https://agriculturegoods.com/wp-content/uploads/2023/05/Smart-farming.gif" class="slide" alt="">
+      <img src="https://wallpaperaccess.com/full/13431654.jpg" class="slide" alt="">
+      <img src="https://plus.unsplash.com/premium_photo-1661854008793-8ce54b2e622b?q=80&w=1169" class="slide" alt="">
+      <img src="https://images.unsplash.com/photo-1511690656952-34342bb7c2f2?q=80&w=1470" class="slide" alt="">
+    </div>
+
+    <div class="dots" aria-hidden="false">
+      <span class="dot active"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+    </div>
+  </div>
+
+  <!-- About Section -->
+  <section class="about">
+    <h2>About Us</h2>
+    <p>
+      We are passionate about empowering farmers with the tools, knowledge, and resources
+      they need to succeed. Our vision is to combine traditional farming practices with
+      modern technology to create a smarter and more sustainable future.
+    </p>
+  </section>
+
+  <!-- Cards Section -->
+  <section class="features">
+    <h3>See More Details:</h3>
+
+    <div class="cards">
+      <a href="season.html" class="card">
+        <img src="https://i.ytimg.com/vi/DwHjlEEL6nQ/maxresdefault.jpg" alt="">
+        <div class="card-title">Season Wise</div>
+      </a>
+
+      <a href="soil.html" class="card">
+        <img src="https://tse4.mm.bing.net/th/id/OIP.c7yO9jslyAZgEe7r2IvyhwHaGN?pid=Api&P=0&h=220" alt="">
+        <div class="card-title">Soil Type</div>
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>Email: lodhinitin2005@gmail.com</p>
+    <p>Phone: 9755952808 / 9406558405</p>
+
+    <div class="social">
+      <a href="#">🌐</a>
+      <a href="#">📸</a>
+      <a href="#">💼</a>
+    </div>
+  </footer>
+
+  <!-- Auth overlay (appears until user logs in / signs up) -->
+  <div id="authOverlay" class="auth-overlay" style="display:none" role="dialog" aria-modal="true">
+    <div class="auth-card" role="document">
+      <h2 id="authTitle">Sign up</h2>
+      <p id="authLead" class="auth-small">Site use karne se pehle apna account banayein. Bad me login kar sakte hain.</p>
+
+      <form id="authForm" autocomplete="off">
+        <div id="nameField">
+          <label for="authName">Naam</label>
+          <input id="authName" name="name" />
+        </div>
+
+        <label for="authEmail">Email</label>
+        <input id="authEmail" name="email" type="email" required />
+
+        <label for="authPassword">Password</label>
+        <input id="authPassword" name="password" type="password" required />
+
+        <button type="submit" class="btn" id="authSubmit">Create account</button>
+
+        <div class="auth-small" id="authToggleText">
+          Already have an account?
+          <button type="button" id="authToggleBtn" class="link">Login</button>
+        </div>
+
+        <div id="authMessage" class="auth-msg" style="display:none"></div>
+        <div id="authError" class="auth-err" style="display:none"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Slider Script -->
+  <script>
+    let index = 0;
+    const slides = document.querySelectorAll('.slide');
+    const dots = document.querySelectorAll('.dot');
+
+    function showSlide(n) {
+      slides.forEach((slide, i) => {
+        slide.classList.toggle('active', i === n);
+        dots[i].classList.toggle('active', i === n);
+      });
+    }
+
+    function nextSlide() {
+      index = (index + 1) % slides.length;
+      showSlide(index);
+    }
+
+    setInterval(nextSlide, 3000);
+  </script>
+
+  <!-- Auth gating script -->
+  <script>
+    (function(){
+      const AUTH_KEY = 'ffs_user';
+      const LOGGED_KEY = 'ffs_logged';
+
+      const overlay = document.getElementById('authOverlay');
+      const authForm = document.getElementById('authForm');
+      const authTitle = document.getElementById('authTitle');
+      const authLead = document.getElementById('authLead');
+      const nameField = document.getElementById('nameField');
+      const authName = document.getElementById('authName');
+      const authEmail = document.getElementById('authEmail');
+      const authPassword = document.getElementById('authPassword');
+      const authSubmit = document.getElementById('authSubmit');
+      const authToggleBtn = document.getElementById('authToggleBtn');
+      const authToggleText = document.getElementById('authToggleText');
+      const authMessage = document.getElementById('authMessage');
+      const authError = document.getElementById('authError');
+      const logoutBtn = document.getElementById('logoutBtn');
+      function getUser(){
+        try{ return JSON.parse(localStorage.getItem(AUTH_KEY)); } catch(e){ return null; }
+      }    
+      function setUser(u){ localStorage.setItem(AUTH_KEY, JSON.stringify(u)); }
+      function setLogged(email){ localStorage.setItem(LOGGED_KEY, email); }
+      function clearLogged(){ localStorage.removeItem(LOGGED_KEY); }
+      function getLogged(){ return localStorage.getItem(LOGGED_KEY); }
+
+      function showMsg(txt){ authMessage.style.display='block'; authMessage.textContent = txt; authError.style.display='none'; }
+      function showErr(txt){ authError.style.display='block'; authError.textContent = txt; authMessage.style.display='none'; }
+      function clearMsgs(){ authError.style.display='none'; authMessage.style.display='none'; }
+
+      function switchToLogin(){
+        authTitle.textContent = 'Login';
+        authLead.textContent = 'Apna email aur password daal kar login karein.';
+        nameField.style.display = 'none';
+        authSubmit.textContent = 'Login';
+        authToggleText.innerHTML = 'Naya user? <button type="button" id="authToggleBtn" class="link">Sign up</button>';
+        // rebind toggle
+        document.getElementById('authToggleBtn').addEventListener('click', switchToSignup);
+        clearMsgs();
+      }
+
+      function switchToSignup(){
+        authTitle.textContent = 'Sign up';
+        authLead.textContent = 'Site use karne se pehle apna account banayein. Bad me login kar sakte hain.';
+        nameField.style.display = 'block';
+        authSubmit.textContent = 'Create account';
+        authToggleText.innerHTML = 'Already have an account? <button type="button" id="authToggleBtn" class="link">Login</button>';
+        document.getElementById('authToggleBtn').addEventListener('click', switchToLogin);
+        clearMsgs();
+      }
+
+      // Initialize overlay logic
+      const existingUser = getUser();
+      const logged = getLogged();
+
+      function showOverlayIfNeeded(){
+        // if already logged -> hide overlay
+        if(logged){
+          overlay.style.display = 'none';
+          return;
+        }
+        // otherwise block site
+        overlay.style.display = 'flex';
+        if(existingUser){
+          switchToLogin();
+        } else {
+          switchToSignup();
+        }
+      }
+
+      // If user logged in previously, allow access
+      if(getLogged()){
+        overlay.style.display = 'none';
+      } else {
+        showOverlayIfNeeded();
+      }
+      
+      // handle form submit
+      authForm.addEventListener('submit', function(e){
+        e.preventDefault();
+        clearMsgs();
+        const name = (authName.value || '').trim();
+        const email = (authEmail.value || '').trim().toLowerCase();
+        const password = (authPassword.value || '');
+
+        if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ showErr('Valid email daalein.'); return; }
+        if(password.length < 4){ showErr('Password kam se kam 4 characters ka hona chahiye.'); return; }
+
+        const user = getUser();
+
+        // if no user stored => signup
+        if(!user){
+          if(!name){ showErr('Apna naam daalein.'); return; }
+          const newUser = { name, email, password };
+          setUser(newUser);
+          setLogged(email);
+          showMsg('Account ban gaya. Site khol rahe hain...');
+          setTimeout(()=>{ overlay.style.display='none'; logoutBtn.style.display='inline-block'; }, 800);
+          return;
+        }
+
+        // If user exists -> login
+        if(user.email !== email || user.password !== password){
+          showErr('Email ya password galat hai.');
+          return;
+        }
+
+        setLogged(email);
+        showMsg('Login successful. Site khol rahe hain...');
+        setTimeout(()=>{ overlay.style.display='none'; logoutBtn.style.display='inline-block'; }, 600);
+      });
+
+      // toggle (initial binding)
+      authToggleBtn.addEventListener('click', function(){
+        const modeIsSignup = nameField.style.display !== 'none' && nameField.style.display !== '';
+        if(modeIsSignup) switchToLogin(); else switchToSignup();
+      });
+
+      // Logout handler
+      logoutBtn.addEventListener('click', function(){
+        clearLogged();
+        overlay.style.display = 'flex';
+        if(getUser()) switchToLogin(); else switchToSignup();
+      });
+
+      const obs = new MutationObserver(() => {
+        if(overlay.style.display !== 'none'){
+          setTimeout(()=> {
+            if(nameField.style.display !== 'none') authName.focus();
+            else authEmail.focus();
+          }, 50);
+        }
+      });
+      obs.observe(overlay, { attributes: true, attributeFilter: ['style'] });
+
+    })();
+  </script>
+
+</body>
+</html>

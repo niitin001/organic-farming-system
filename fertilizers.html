@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fertilizers | Farmer Friendly</title>
+
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #e9f7e9;
+    margin: 0;
+  }
+
+  header {
+    background: #2e8b57;
+    color: white;
+    padding: 15px 0;
+    text-align: center;
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 16px;
+  }
+
+  .logo {
+    font-size: 28px;
+    font-weight: bold;
+  }
+
+  nav {
+    margin-top: 10px;
+  }
+
+  nav a {
+    color: white;
+    text-decoration: none;
+    margin: 0 15px;
+    font-size: 17px;
+    padding: 6px 12px;
+    border-radius: 5px;
+  }
+
+  nav a:hover, nav a.active {
+    background: rgba(255,255,255,0.2);
+  }
+
+  /* Add Button */
+  .add-btn {
+    display: block;
+    margin: 20px auto;
+    padding: 12px 23px;
+    background: #1b5e20;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 17px;
+    transition: 0.3s;
+  }
+  .add-btn:hover {
+    background: #0f3d14;
+    transform: scale(1.05);
+  }
+
+  /* Product Grid */
+  .products {
+    display: grid;
+    grid-template-columns: repeat(auto-fit,minmax(250px,1fr));
+    gap: 20px;
+    padding: 20px;
+  }
+
+  .product {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    text-align: center;
+    padding: 18px;
+    transition: 0.3s;
+  }
+
+  .product:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+  }
+
+  .product img {
+    width: 100%;
+    height: 160px;
+    border-radius: 12px;
+    object-fit: cover;
+  }
+
+  button {
+    margin-top: 10px;
+    padding: 10px 18px;
+    background: #43a047;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  button:hover {
+    background: #2e7d32;
+    transform: scale(1.07);
+  }
+
+  footer {
+    text-align: center;
+    background: #2e7d32;
+    color: white;
+    padding: 15px;
+    margin-top: 30px;
+    font-size: 14px;
+  }
+
+  /* Modal */
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; } to { opacity: 1; }
+  }
+
+  .modal-content {
+    background: white;
+    padding: 20px;
+    width: 330px;
+    border-radius: 12px;
+    text-align: center;
+    animation: pop 0.3s ease;
+  }
+
+  @keyframes pop {
+    from { transform: scale(0.7); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .modal input {
+    width: 90%;
+    padding: 10px;
+    margin: 8px 0;
+    border-radius: 6px;
+    border: 1px solid #888;
+    transition: 0.3s;
+  }
+
+  .modal input:focus {
+    border-color: #2e7d32;
+    box-shadow: 0 0 5px #9ccc65;
+  }
+
+  .close-btn {
+    background: rgb(204, 0, 0);
+    padding: 8px 12px;
+    border: none;
+    color: white;
+    cursor: pointer;
+    border-radius: 5px;
+  }
+</style>
+
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">Farmer Friendly 🌿</div>
+    <nav>
+      <a href="index.html">HOME</a>
+      <a href="about.html">ABOUT</a>
+      <a href="crop-guide.html">CROP GUIDE</a>
+      <a href="purchase.html">PURCHASE</a>
+      <a href="weather.html">WEATHER</a>
+      <a href="contact.html">CONTACT</a>
+    </nav>
+  </div>
+</header>
+
+<button class="add-btn" onclick="openForm()">➕ Add Your Fertilizer</button>
+
+<div class="products" id="productList">
+
+  <!-- Product Template -->
+  <div class="product">
+    <img src="https://tse1.mm.bing.net/th/id/OIP.f3n64hBgOgFWVzlGqHiiUgHaDp">
+    <h3>Organic Compost</h3>
+    <p><b>Price:</b> ₹500 / 10kg</p>
+    <button onclick="buy('Organic Compost', 500)">Buy Now</button>
+  </div>
+
+  <div class="product">
+    <img src="https://tse4.mm.bing.net/th/id/OIP.pb6ZXPImi_oAfUp7abpgZwHaFW">
+    <h3>Vermicompost</h3>
+    <p><b>Price:</b> ₹450 / 10kg</p>
+    <button onclick="buy('Vermicompost', 450)">Buy Now</button>
+  </div>
+
+  <div class="product">
+    <img src="https://tse4.mm.bing.net/th/id/OIP.-IPCrw2HoLGD2fBZNV1TqAHaHa">
+    <h3>Bio Fertilizer</h3>
+    <p><b>Price:</b> ₹600 / 10kg</p>
+    <button onclick="buy('Bio Fertilizer', 600)">Buy Now</button>
+  </div>
+
+</div>
+
+<!-- Modal -->
+<div class="modal" id="addModal">
+  <div class="modal-content">
+    <h2>Add Your Fertilizer</h2>
+
+    <input id="fname" type="text" placeholder="Fertilizer Name">
+    <input id="fprice" type="number" placeholder="Price (₹)">
+    <input id="fimg" type="text" placeholder="Image URL">
+
+    <button onclick="addFertilizer()">Add</button>
+    <button class="close-btn" onclick="closeForm()">Close</button>
+  </div>
+</div>
+
+<footer>© 2025 Farmer Friendly | Contact: 9755952808</footer>
+
+<script>
+  function buy(item, price) {
+    let ok = confirm(`Do you want to buy ${item} for ₹${price}?`);
+    if (ok) {
+      let method = prompt("Enter payment mode: UPI / Card / Cash");
+      if (method) alert(`✔ ${item} purchased successfully using ${method}!`);
+    }
+  }
+
+  function openForm() {
+    document.getElementById("addModal").style.display = "flex";
+  }
+  function closeForm() {
+    document.getElementById("addModal").style.display = "none";
+  }
+
+  function addFertilizer() {
+    let name = document.getElementById("fname").value;
+    let price = document.getElementById("fprice").value;
+    let img = document.getElementById("fimg").value;
+
+    if (name === "" || price === "" || img === "") {
+      alert("Please fill all fields!");
+      return;
+    }
+
+    let div = document.createElement("div");
+    div.className = "product";
+    div.innerHTML = `
+      <img src="${img}" onerror="this.src='https://via.placeholder.com/250?text=No+Image'">
+      <h3>${name}</h3>
+      <p><b>Price:</b> ₹${price}</p>
+      <button onclick="buy('${name}', '${price}')">Buy Now</button>
+    `;
+
+    document.getElementById("productList").appendChild(div);
+
+    alert("✔ Fertilizer added successfully!");
+    closeForm();
+  }
+</script>
+
+</body>
+</html>

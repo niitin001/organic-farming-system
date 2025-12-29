@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Crop Guide - Farmer Friendly (Hybrid Search)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    /* 🌿 Global Styles (kept same as your original, with modal+toggle+search additions) */
+    body {
+      background: #f9fff9;
+      margin: 0;
+      font-family: "Poppins", Arial, sans-serif;
+      color: #2e3d29;
+    }
+
+    /* 🌾 Header */
+    header {
+      background: linear-gradient(90deg, #2e8b57, #3cb371);
+      padding: 20px 0;
+      text-align: center;
+      color: #fff;
+      font-size: 28px;
+      font-weight: bold;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+      position: relative;
+    }
+
+    header .logo {
+      font-size: 32px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    nav {
+      margin-top: 10px;
+    }
+
+    nav a {
+      text-decoration: none;
+      color: #fff;
+      margin: 0 12px;
+      font-weight: 500;
+      padding: 6px 10px;
+      border-radius: 6px;
+      transition: 0.3s;
+    }
+
+    nav a:hover, nav a.active {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .header-right {
+      position: absolute;
+      right: 18px;
+      top: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .lang-btn {
+      background: rgba(255,255,255,0.95);
+      border: none;
+      padding: 8px 10px;
+      border-radius: 8px;
+      color: #2e8b57;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    }
+
+    /* Search box */
+    .search-wrap {
+      display:flex;
+      gap:6px;
+      align-items:center;
+    }
+    .search-input {
+      padding:8px 10px;
+      border-radius:8px;
+      border:none;
+      min-width:180px;
+      outline: none;
+      font-weight:600;
+    }
+    .search-btn {
+      background:#fff;
+      color:#2e8b57;
+      border:none;
+      padding:8px 10px;
+      border-radius:8px;
+      font-weight:700;
+      cursor:pointer;
+    }
+
+    .icons {
+      margin-top: 8px;
+      font-size: 22px;
+    }
+
+    /* 🌱 Container */
+    .container {
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+
+    h2 {
+      text-align: center;
+      font-weight: 700;
+      margin-top: 50px;
+      font-size: 28px;
+      color: #2e8b57;
+      text-shadow: 1px 1px 2px #d0ffd0;
+    }
+
+    /* 🌻 Grid Layout */
+    .grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 40px 45px;
+      justify-content: center;
+      margin-bottom: 40px;
+      margin-top: 25px;
+    }
+
+    .item {
+      width: 150px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: 0.3s ease-in-out;
+      cursor: pointer;
+      background: transparent;
+      border-radius: 10px;
+      padding: 8px;
+    }
+
+    .item:hover { transform: scale(1.08); }
+
+    .circle-img {
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid #2e8b57;
+      box-shadow: 0 4px 8px rgba(0, 128, 0, 0.2);
+      transition: 0.3s;
+    }
+
+    .circle-img:hover {
+      border-color: #3cb371;
+      box-shadow: 0 0 12px rgba(60, 179, 113, 0.6);
+    }
+
+    .label {
+      margin-top: 10px;
+      font-size: 16px;
+      text-align: center;
+      font-weight: 600;
+      color: #2e3d29;
+    }
+
+    /* Modal styles (new) */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal.open { display:flex; }
+    .modal-content {
+      width: 100%;
+      max-width: 960px;
+      background: #fff;
+      border-radius: 12px;
+      padding: 18px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.25);
+      color: #222;
+    }
+    .modal-header { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .modal-header h3 { margin:0; color:#2e8b57 }
+    .close-btn { background:#f2f2f2; border:none; padding:6px 10px; border-radius:8px; cursor:pointer; font-weight:700 }
+    .crop-img { width:100%; max-height:280px; object-fit:cover; border-radius:10px; margin:10px 0; }
+    .modal-body { display:grid; grid-template-columns:1fr 380px; gap:18px; align-items:start; }
+    @media (max-width:920px){ .modal-body{ grid-template-columns:1fr; } }
+
+    .timeline { border-left:3px solid #2e8b57; padding-left:14px; background:#fbfff8; border-radius:8px; padding-top:8px; padding-bottom:8px; }
+    .step { margin-bottom:12px; }
+    .step strong { color:#2e8b57; }
+
+    .table { width:100%; border-collapse:collapse; margin-top:8px; }
+    .table th, .table td { padding:8px 10px; border:1px solid #eef7ee; text-align:left; }
+    .table thead th { background:#f2fbf4; color:#2e8b57; font-weight:700; }
+
+    .calculator { background:#fbfff8; padding:12px; border-radius:8px; margin-top:12px; }
+    .calculator label { display:block; font-weight:700; margin-bottom:6px; color:#2e8b57; }
+    .calculator input { width:100%; padding:8px; border-radius:6px; border:1px solid #dfeee0; margin-bottom:8px; }
+    .calc-btn { width:100%; padding:10px; border-radius:8px; border:none; background:#2e8b57; color:#fff; font-weight:700; cursor:pointer; }
+
+    .result { margin-top:10px; background:#fff; border-radius:8px; padding:10px; box-shadow:0 4px 12px rgba(0,0,0,0.04) }
+
+    /* Search result (online backup) */
+    .backup-box {
+      background:#fff9ed; border-left:4px solid #f0a500; padding:12px; border-radius:8px; margin-top:10px;
+    }
+    .backup-title { font-weight:800; color:#b35700; margin-bottom:8px; }
+
+    /* Add note form */
+    .note-area { margin-top:12px; }
+    .note-area textarea { width:100%; min-height:80px; padding:8px; border-radius:6px; border:1px solid #eee; }
+    .note-save { margin-top:6px; padding:8px 10px; border-radius:8px; border:none; background:#2e8b57; color:#fff; font-weight:700; cursor:pointer; }
+
+    /* 🌿 Footer */
+    footer {
+      background: linear-gradient(90deg, #2e8b57, #3cb371);
+      color: #fff;
+      padding: 20px 0;
+      text-align: center;
+      margin-top: 50px;
+      font-size: 15px;
+      box-shadow: 0 -3px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    footer .social a { text-decoration: none; color: #fff; margin: 0 10px; font-size: 20px; transition: 0.3s; }
+    footer .social a:hover { color: #cfffcc; }
+
+    /* 📱 Responsive Design tweaks */
+    @media (max-width: 768px) {
+      nav { display: flex; flex-wrap: wrap; justify-content: center; }
+      .item { width: 120px; }
+      h2 { font-size: 24px; }
+      .header-right { right:8px; top:10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 🌾 Header -->
+  <header>
+    <div class="header-inner">
+      <div class="logo">Farmer Friendly 🌿</div>
+      <nav>
+        <a href="index.html">HOME</a>
+        <a href="about.html">ABOUT</a>
+        <a href="crop-guide.html" class="active">CROP GUIDE</a>
+        <a href="purchase.html">PURCHASE</a>
+        <a href="weather.html">WEATHER</a>
+        <a href="contact.html">CONTACT</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- 🌱 Main Content -->
+  <div class="container">
+    <h2 id="headingField">🌾 Field Crops</h2>
+
+    <div class="grid" id="gridField">
+      <div class="item" data-crop="wheat">
+        <img src="https://media.istockphoto.com/id/540573816/vector/wheat-ears-isolated-eps-10.jpg?s=2048x2048&w=is&k=20&c=50kOTHtdl1OxF-3GhfN-HHCeowybply_HDvh1ylyRss=" class="circle-img" alt="Wheat">
+        <div class="label" data-label="wheat">🌾 Wheat</div>
+      </div>
+      <div class="item" data-crop="rice">
+        <img src="https://media.istockphoto.com/id/1269231959/photo/jasmine-rice-and-paddy.jpg?s=2048x2048&w=is&k=20&c=SfqSkkQPI9Rvhx1MBwZ9UpgNwp8TPJgdnUewA2_9EY4=" class="circle-img" alt="Rice">
+        <div class="label" data-label="rice">🌾 Rice</div>
+      </div>
+      <div class="item" data-crop="maize">
+        <img src="https://media.istockphoto.com/id/1403057876/photo/fresh-sweet-corn.jpg?s=2048x2048&w=is&k=20&c=skklt4_hHgihex5SrnqnstA-_w5eBQVGE1osSJlmmZk=" class="circle-img" alt="Maize">
+        <div class="label" data-label="maize">🌽 Maize</div>
+      </div>
+      <div class="item" data-crop="barley">
+        <img src="https://media.istockphoto.com/id/1153006940/photo/bunch-of-wheat-spike-barley-on-white-background.jpg?s=612x612&w=0&k=20&c=A6f0wcQaFNUE5NVVqAkGrXw4f7fZIou_v4kgMIs3Ecc=" class="circle-img" alt="Barley">
+        <div class="label" data-label="barley">🌾 Barley</div>
+      </div>
+    </div>
+
+    <h2 id="headingVeg">🥦 Vegetables</h2>
+    <div class="grid" id="gridVeg">
+      <div class="item" data-crop="tomato">
+        <img src="https://media.istockphoto.com/id/1264129161/photo/two-fresh-tomatoes.jpg?s=612x612&w=0&k=20&c=49zpN8-xtqgnqzMOXTrRA341u4VCweYpTYuy9PczHCA=" class="circle-img" alt="Tomato">
+        <div class="label" data-label="tomato">🍅 Tomato</div>
+      </div>
+      <div class="item" data-crop="potato">
+        <img src="https://media.istockphoto.com/id/1172183675/photo/potatoes-and-label-organic.jpg?s=612x612&w=0&k=20&c=tIKS-MKrCjYxwvgMdQad72cK2AIYI5qIDGYnchk9PfA=" class="circle-img" alt="Potato">
+        <div class="label" data-label="potato">🥔 Potato</div>
+      </div>
+      <div class="item" data-crop="onion">
+        <img src="https://media.istockphoto.com/id/1281751457/photo/agriculture-food-presentation-background.jpg?s=612x612&w=0&k=20&c=TKF3yvU3Smh_MXZvkWWibA9mzFKTRB8neLL0N1xfhZA=" class="circle-img" alt="Onion">
+        <div class="label" data-label="onion">🧅 Onion</div>
+      </div>
+      <div class="item" data-crop="brinjal">
+        <img src="https://media.istockphoto.com/id/501363059/photo/eggplant.jpg?s=612x612&w=0&k=20&c=rP1tUn8OHqBrba6Rmz9mcD5PkbgSeI1X1YpzEbUPWxg=" class="circle-img" alt="Brinjal">
+        <div class="label" data-label="brinjal">🍆 Brinjal</div>
+      </div>
+    </div>
+
+    <h2 id="headingFruit">🍎 Fruit Trees</h2>
+    <div class="grid" id="gridFruit">
+      <div class="item" data-crop="mango">
+        <img src="https://images.unsplash.com/photo-1732472581875-89ff83f18439?auto=format&fit=crop&q=80&w=687" class="circle-img" alt="Mango">
+        <div class="label" data-label="mango">🥭 Mango</div>
+      </div>
+      <div class="item" data-crop="orange">
+        <img src="https://images.unsplash.com/photo-1611080626919-7cf5a9dbab5b?auto=format&fit=crop&q=60&w=600" class="circle-img" alt="Orange">
+        <div class="label" data-label="orange">🍊 Orange</div>
+      </div>
+      <div class="item" data-crop="guava">
+        <img src="https://images.unsplash.com/photo-1689996647327-5d263fbbc79d?auto=format&fit=crop&q=60&w=600" class="circle-img" alt="Guava">
+        <div class="label" data-label="guava">🍐 Guava</div>
+      </div>
+      <div class="item" data-crop="apple">
+        <img src="https://plus.unsplash.com/premium_photo-1661322640130-f6a1e2c36653?auto=format&fit=crop&q=60&w=600" class="circle-img" alt="Apple">
+        <div class="label" data-label="apple">🍎 Apple</div>
+      </div>
+    </div>
+
+    <h2 id="headingFlowers">🌸 Flowers</h2>
+    <div class="grid" id="gridFlowers">
+      <div class="item" data-crop="marigold">
+        <img src="https://images.unsplash.com/photo-1661142175513-a5f0871f1ad1?auto=format&fit=crop&q=60&w=600" class="circle-img" alt="Marigold">
+        <div class="label" data-label="marigold">🌼 Marigold</div>
+      </div>
+      <div class="item" data-crop="rose">
+        <img src="https://images.unsplash.com/photo-1559563362-c667ba5f5480?auto=format&fit=crop&q=60&w=600" class="circle-img" alt="Rose">
+        <div class="label" data-label="rose">🌹 Rose</div>
+      </div>
+      <div class="item" data-crop="sunflower">
+        <img src="https://plus.unsplash.com/premium_photo-1700124162812-1d5d29087b81?auto=format&fit=crop&q=60&w=600" class="circle-img" alt="Sunflower">
+        <div class="label" data-label="sunflower">🌻 Sunflower</div>
+      </div>
+      <div class="item" data-crop="jasmine">
+        <img src="https://images.unsplash.com/photo-1591353527282-8984ba1a018f?auto=format&fit=crop&q=60&w=600" class="circle-img" alt="Jasmine">
+        <div class="label" data-label="jasmine">🌺 Jasmine</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div id="cropModal" class="modal" aria-hidden="true">
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-header">
+        <h3 id="modalTitle"></h3>
+        <div>
+          <button id="closeModalBtn" class="close-btn">✕</button>
+        </div>
+      </div>
+
+      <div id="modalBody">
+        <!-- populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 🌿 Footer -->
+  <footer>
+    <p>Email: lodhinitin2005@gmail.com | Phone: 9755952808 / 9406558405</p>
+    <div class="social">
+      <a href="https://www.facebook.com/" target="_blank" title="Facebook">🌐 f</a>
+      <a href="https://twitter.com/" target="_blank" title="Twitter">🐦 t</a>
+      <a href="https://www.linkedin.com/" target="_blank" title="LinkedIn">💼 in</a>
+    </div>
+  </footer>
+
+  <script>
+    /************************************************
+     * HYBRID SEARCH: Local DB first, then Online (Wikipedia)
+     * - Uses existing crops object (local)
+     * - If not found, fetch summary from Wikipedia (en/hi)
+     ************************************************/
+
+    let LANG = 'en'; // 'en' or 'hi' for UI labels
+
+    // UI text (for headings/labels)
+    const UI = {
+      en: {
+        fields: "🌾 Field Crops",
+        veg: "🥦 Vegetables",
+        fruit: "🍎 Fruit Trees",
+        flowers: "🌸 Flowers",
+        calcLabel: "Enter farm area (in acres)",
+        calcBtn: "Calculate",
+        resultFor: "For",
+        compost: "Compost",
+        neemOil: "Neem oil",
+        water: "Water",
+        totalCost: "Total cost (₹)",
+        seeds: "Seeds",
+        manure: "Manure/Compost",
+        irrigation: "Irrigation",
+        pestControl: "Pest Control",
+        total: "Total",
+        expectedProfit: "Expected Profit",
+        pleaseEnterArea: "Please enter a valid area.",
+        searchPlaceholder: "Search crop (e.g., Sugarcane)...",
+        onlineInfoFrom: "Online summary (source: Wikipedia)",
+        noInfoFound: "No information found locally or online.",
+        addNote: "Add a local note",
+        saveNote: "Save Note",
+        noteSaved: "Note saved locally."
+      },
+      hi: {
+        fields: "🌾 फसल मार्गदर्शिका",
+        veg: "🥦 सब्जियाँ",
+        fruit: "🍎 फलदार पेड़",
+        flowers: "🌸 फूल",
+        calcLabel: "खेत का क्षेत्र (एकड़ में) दर्ज करें",
+        calcBtn: "गणना करें",
+        resultFor: "के लिए",
+        compost: "खाद (Compost)",
+        neemOil: "नीम तेल",
+        water: "पानी",
+        totalCost: "कुल खर्च (₹)",
+        seeds: "बीज",
+        manure: "खाद/कम्पोस्ट",
+        irrigation: "सिंचाई",
+        pestControl: "कीट नियंत्रण",
+        total: "कुल",
+        expectedProfit: "अनुमानित मुनाफा",
+        pleaseEnterArea: "कृपया मान्य क्षेत्र दर्ज करें।",
+        searchPlaceholder: "खोजें फ़सल (उदा., गन्ना)...",
+        onlineInfoFrom: "ऑनलाइन सार (स्रोत: विकिपीडिया)",
+        noInfoFound: "स्थानीय या ऑनलाइन कोई जानकारी नहीं मिली।",
+        addNote: "स्थानीय नोट जोड़ें",
+        saveNote: "नोट सहेजें",
+        noteSaved: "नोट स्थानीय रूप से सहेजा गया।"
+      }
+    };
+
+    /* -------------------------
+       LOCAL CROPS DATABASE
+       (same as earlier; used for modal details)
+       ------------------------- */
+    const crops = {
+      wheat: { /*... same data as earlier ...*/ },
+      rice: { /*... same data as earlier ...*/ },
+      maize: { /*... */ },
+      barley: { /*... */ },
+      tomato: { /*... */ },
+      potato: { /*... */ },
+      onion: { /*... */ },
+      brinjal: { /*... */ },
+      mango: { /*... */ },
+      orange: { /*... */ },
+      guava: { /*... */ },
+      apple: { /*... */ },
+      marigold: { /*... */ },
+      rose: { /*... */ },
+      sunflower: { /*... */ },
+      jasmine: { /*... */ }
+    };
+
+    // Because the full objects are long, to keep this block readable we will re-create the
+    // same crop objects by copying from the previous v3; for the code to run, we must
+    // paste the full crop objects here. (In this combined file they are necessary.)
+    // For brevity in this message, we'll programmatically reassign by building the object
+    // from the previously included data. Please note: in your saved file ensure the
+    // `crops` object contains the full entries exactly as in your v3 version above.
+    // ---- To make this file self-contained, replace the placeholder above with the full data.
+    // For the assistant response, we will now paste the full crop data exactly:
+
+    /* ---------- BEGIN full crop data (same as v3) ---------- */
+    Object.assign(crops, {
+      wheat: {
+        img: "https://media.istockphoto.com/id/540573816/vector/wheat-ears-isolated-eps-10.jpg?s=2048x2048&w=is&k=20&c=50kOTHtdl1OxF-3GhfN-HHCeowybply_HDvh1ylyRss=",
+        en: {
+          title: "Wheat",
+          fullTitle: "Organic Wheat Farming",
+          timeline: [
+            {t:"Soil Preparation", d:"Loamy soil; plough and apply compost (≈10 tons/acre)."},
+            {t:"Sowing Time", d:"November–December. Seed rate 40–50 kg/acre."},
+            {t:"Irrigation", d:"4–5 irrigations; avoid waterlogging."},
+            {t:"Pest Control", d:"Neem oil sprays (5 ml per litre) or neem formulations."},
+            {t:"Harvest", d:"120–150 days when spikes turn golden."}
+          ],
+          cost: { seeds:2000, manure:3000, irrigation:1200, pest:800, expectedProfit:18000 },
+          fertPerAcre: { compostKg:1000, neemL:5, waterL:9000 }
+        },
+        hi: {
+          title: "गेहूं",
+          fullTitle: "ऑर्गेनिक गेहूँ की खेती",
+          timeline: [
+            {t:"मिट्टी की तैयारी", d:"लोमी मिट्टी; जुताई करके 10 टन/एकड़ कम्पोस्ट डालें।"},
+            {t:"बुवाई का समय", d:"नवंबर–दिसंबर। बीज दर 40–50 किग्रा/एकड़।"},
+            {t:"सिंचाई", d:"4–5 बार; जलभराव से बचें।"},
+            {t:"कीट नियंत्रण", d:"नीम तेल के छिड़काव (5 मिली/लीटर) या नीम के घोल।"},
+            {t:"कटाई", d:"120–150 दिन बाद जब बालियाँ सुनहरी हों।"}
+          ],
+          cost: { seeds:2000, manure:3000, irrigation:1200, pest:800, expectedProfit:18000 },
+          fertPerAcre: { compostKg:1000, neemL:5, waterL:9000 }
+        }
+      },
+      rice: {
+        img: "https://media.istockphoto.com/id/1269231959/photo/jasmine-rice-and-paddy.jpg?s=2048x2048&w=is&k=20&c=SfqSkkQPI9Rvhx1MBwZ9UpgNwp8TPJgdnUewA2_9EY4=",
+        en: {
+          title: "Rice",
+          fullTitle: "Organic Rice Farming",
+          timeline: [
+            {t:"Soil", d:"Clay/loamy soil that retains water."},
+            {t:"Sowing/Transplanting", d:"June–July; transplant 20–25 day old seedlings."},
+            {t:"Water Management", d:"Maintain ~5 cm standing water until flowering."},
+            {t:"Fertilizers", d:"Use green manure, compost and cow dung before planting."},
+            {t:"Harvest", d:"130–150 days when grains ripen."}
+          ],
+          cost: { seeds:2500, manure:3500, irrigation:2000, pest:1000, expectedProfit:22000 },
+          fertPerAcre: { compostKg:1200, neemL:6, waterL:25000 }
+        },
+        hi: {
+          title: "धान",
+          fullTitle: "ऑर्गेनिक धान की खेती",
+          timeline: [
+            {t:"मिट्टी", d:"ऐसी मिट्टी जो पानी रख सके (चिकनी/लेमी)।"},
+            {t:"बुवाई/रोपाई", d:"जून–जुलाई; 20–25 दिन के नर्सरी पौधे रोपें।"},
+            {t:"पानी प्रबंधन", d:"फूल आने तक ~5 सेमी पानी रखें।"},
+            {t:"उर्वरक", d:"बुवाई से पहले ग्रीन मैन्यर, कम्पोस्ट व गोबर दें।"},
+            {t:"कटाई", d:"130–150 दिन बाद जब धान पक जाए।"}
+          ],
+          cost: { seeds:2500, manure:3500, irrigation:2000, pest:1000, expectedProfit:22000 },
+          fertPerAcre: { compostKg:1200, neemL:6, waterL:25000 }
+        }
+      },
+      maize: {
+        img: "https://media.istockphoto.com/id/1403057876/photo/fresh-sweet-corn.jpg?s=2048x2048&w=is&k=20&c=skklt4_hHgihex5SrnqnstA-_w5eBQVGE1osSJlmmZk=",
+        en: {
+          title: "Maize",
+          fullTitle: "Organic Maize Farming",
+          timeline: [
+            {t:"Soil", d:"Fertile, well-drained loam."},
+            {t:"Sowing", d:"Feb–Mar or Jun–Jul. Seed rate ~20 kg/acre."},
+            {t:"Irrigation", d:"Every 7–10 days depending on rainfall."},
+            {t:"Pest Control", d:"Neem-based bio-pesticides."},
+            {t:"Harvest", d:"90–100 days after sowing."}
+          ],
+          cost: { seeds:1800, manure:3000, irrigation:1000, pest:700, expectedProfit:15000 },
+          fertPerAcre: { compostKg:900, neemL:4, waterL:8000 }
+        },
+        hi: {
+          title: "मकई",
+          fullTitle: "ऑर्गेनिक मकई की खेती",
+          timeline: [
+            {t:"मिट्टी", d:"उपजाऊ, अच्छी निचोड़ वाली मिट्टी।"},
+            {t:"बुवाई", d:"फरवरी–मार्च या जून–जुलाई। बीज दर ~20 किग्रा/एकड़।"},
+            {t:"सिंचाई", d:"बारिश के अनुसार हर 7–10 दिन।"},
+            {t:"कीट नियंत्रण", d:"नीम-आधारित जैविक कीटनाशक।"},
+            {t:"कटाई", d:"90–100 दिन बाद।"}
+          ],
+          cost: { seeds:1800, manure:3000, irrigation:1000, pest:700, expectedProfit:15000 },
+          fertPerAcre: { compostKg:900, neemL:4, waterL:8000 }
+        }
+      },
+      barley: {
+        img: "https://media.istockphoto.com/id/1153006940/photo/bunch-of-wheat-spike-barley-on-white-background.jpg?s=612x612&w=0&k=20&c=A6f0wcQaFNUE5NVVqAkGrXw4f7fZIou_v4kgMIs3Ecc=",
+        en: {
+          title: "Barley",
+          fullTitle: "Organic Barley Farming",
+          timeline: [
+            {t:"Soil", d:"Well-drained loamy soil."},
+            {t:"Sowing", d:"Oct–Dec depending on region."},
+            {t:"Irrigation", d:"Moderate irrigation; avoid waterlogging."},
+            {t:"Pest Control", d:"Cultural methods + neem sprays."},
+            {t:"Harvest", d:"When grains mature and turn golden."}
+          ],
+          cost: { seeds:1600, manure:2400, irrigation:900, pest:600, expectedProfit:12000 },
+          fertPerAcre: { compostKg:800, neemL:3, waterL:7000 }
+        },
+        hi: {
+          title: "जौ",
+          fullTitle: "ऑर्गेनिक जौ की खेती",
+          timeline: [
+            {t:"मिट्टी", d:"अच्छी निचोड़ वाली लोमी मिट्टी।"},
+            {t:"बुवाई", d:"अक्टूबर–दिसंबर, क्षेत्र अनुसार।"},
+            {t:"सिंचाई", d:"मध्यम; जलभराव से बचें।"},
+            {t:"कीट नियंत्रण", d:"सांस्कृतिक विधियाँ व नीम स्प्रे।"},
+            {t:"कटाई", d:"जब दाने पककर सुनहरे हों।"}
+          ],
+          cost: { seeds:1600, manure:2400, irrigation:900, pest:600, expectedProfit:12000 },
+          fertPerAcre: { compostKg:800, neemL:3, waterL:7000 }
+        }
+      },
+      tomato: {
+        img: "https://media.istockphoto.com/id/1264129161/photo/two-fresh-tomatoes.jpg?s=612x612&w=0&k=20&c=49zpN8-xtqgnqzMOXTrRA341u4VCweYpTYuy9PczHCA=",
+        en: {
+          title: "Tomato",
+          fullTitle: "Organic Tomato Farming",
+          timeline: [
+            {t:"Soil", d:"Sandy loam rich in organic matter."},
+            {t:"Sowing/Transplanting", d:"Nursery Oct–Dec; transplant after 4–6 weeks."},
+            {t:"Irrigation", d:"Every 3–4 days; drip recommended."},
+            {t:"Pest Control", d:"Trichoderma, neem oil, pheromone traps."},
+            {t:"Harvest", d:"70–90 days after transplanting."}
+          ],
+          cost: { seeds:1500, manure:2500, irrigation:900, pest:900, expectedProfit:15000 },
+          fertPerAcre: { compostKg:900, neemL:4, waterL:8000 }
+        },
+        hi: {
+          title: "टमाटर",
+          fullTitle: "ऑर्गेनिक टमाटर की खेती",
+          timeline: [
+            {t:"मिट्टी", d:"सैंडी लोम, ऑर्गेनिक पदार्थ समृद्ध।"},
+            {t:"बुवाई/रोपण", d:"नर्सरी Oct–Dec; 4–6 सप्ताह बाद रोपण।"},
+            {t:"सिंचाई", d:"3–4 दिन में एक बार; ड्रिप उत्तम।"},
+            {t:"कीट नियंत्रण", d:"ट्राइकोडर्मा, नीम तेल व फेरोमोन ट्रैप।"},
+            {t:"कटाई", d:"रोपण के 70–90 दिन बाद।"}
+          ],
+          cost: { seeds:1500, manure:2500, irrigation:900, pest:900, expectedProfit:15000 },
+          fertPerAcre: { compostKg:900, neemL:4, waterL:8000 }
+        }
+      },
+      potato: {
+        img: "https://media.istockphoto.com/id/1172183675/photo/potatoes-and-label-organic.jpg?s=612x612&w=0&k=20&c=tIKS-MKrCjYxwvgMdQad72cK2AIYI5qIDGYnchk9PfA=",
+        en: {
+          title: "Potato",
+          fullTitle: "Organic Potato Farming",
+          timeline: [
+            {t:"Soil", d:"Sandy loam with high organic matter."},
+            {t:"Sowing", d:"Oct–Nov; use certified seed tubers."},
+            {t:"Irrigation", d:"Every 7–10 days; consistent moisture."},
+            {t:"Pest Control", d:"Neem oil, garlic extract sprays."},
+            {t:"Harvest", d:"90–110 days after planting based on variety."}
+          ],
+          cost: { seeds:2200, manure:3000, irrigation:1000, pest:800, expectedProfit:17000 },
+          fertPerAcre: { compostKg:1100, neemL:5, waterL:12000 }
+        },
+        hi: {
+          title: "आलू",
+          fullTitle: "ऑर्गेनिक आलू की खेती",
+          timeline: [
+            {t:"मिट्टी", d:"सैंडी लोम जिसमें ऑर्गेनिक पदार्थ अधिक हो।"},
+            {t:"बुवाई", d:"अक्तूबर–नवंबर; प्रमाणित ट्यूबर्स का उपयोग करें।"},
+            {t:"सिंचाई", d:"हर 7–10 दिन; नमी बनाए रखें।"},
+            {t:"कीट नियंत्रण", d:"नीम तेल, लहसुन का अर्क।"},
+            {t:"कटाई", d:"90–110 दिन बाद (विविधता पर निर्भर)।"}
+          ],
+          cost: { seeds:2200, manure:3000, irrigation:1000, pest:800, expectedProfit:17000 },
+          fertPerAcre: { compostKg:1100, neemL:5, waterL:12000 }
+        }
+      },
+      onion: {
+        img: "https://media.istockphoto.com/id/1281751457/photo/agriculture-food-presentation-background.jpg?s=612x612&w=0&k=20&c=TKF3yvU3Smh_MXZvkWWibA9mzFKTRB8neLL0N1xfhZA=",
+        en: {
+          title: "Onion",
+          fullTitle: "Organic Onion Farming",
+          timeline: [
+            {t:"Soil", d:"Light loam with good drainage."},
+            {t:"Sowing", d:"Oct–Nov using good quality sets/seed."},
+            {t:"Irrigation", d:"Every 5–7 days until bulb formation."},
+            {t:"Pest Control", d:"Neem oil & cultural practices."},
+            {t:"Harvest", d:"120–140 days after sowing."}
+          ],
+          cost: { seeds:1800, manure:2600, irrigation:1000, pest:700, expectedProfit:14000 },
+          fertPerAcre: { compostKg:950, neemL:4, waterL:11000 }
+        },
+        hi: {
+          title: "प्याज",
+          fullTitle: "ऑर्गेनिक प्याज की खेती",
+          timeline: [
+            {t:"मिट्टी", d:"हल्की लोम, अच्छी निकासी वाली।"},
+            {t:"बुवाई", d:"अक्टूबर–नवंबर; अच्छे सेट/बीज का उपयोग।"},
+            {t:"सिंचाई", d:"गांठ बनने तक हर 5–7 दिन।"},
+            {t:"कीट नियंत्रण", d:"नीम तेल व प्रदर्शनीय कुटुंब।"},
+            {t:"कटाई", d:"120–140 दिन बाद।"}
+          ],
+          cost: { seeds:1800, manure:2600, irrigation:1000, pest:700, expectedProfit:14000 },
+          fertPerAcre: { compostKg:950, neemL:4, waterL:11000 }
+        }
+      },
+      brinjal: {
+        img: "https://media.istockphoto.com/id/501363059/photo/eggplant.jpg?s=612x612&w=0&k=20&c=rP1tUn8OHqBrba6Rmz9mcD5PkbgSeI1X1YpzEbUPWxg=",
+        en: {
+          title: "Brinjal",
+          fullTitle: "Organic Brinjal (Eggplant) Farming",
+          timeline: [
+            {t:"Soil", d:"Fertile loam with organic matter."},
+            {t:"Sowing/Transplanting", d:"Sow in nursery and transplant after 4–6 weeks."},
+            {t:"Irrigation", d:"Regular watering; avoid water stress."},
+            {t:"Pest Control", d:"Neem oil and sticky traps."},
+            {t:"Harvest", d:"50–70 days after transplanting based on variety."}
+          ],
+          cost: { seeds:1400, manure:2200, irrigation:800, pest:600, expectedProfit:12000 },
+          fertPerAcre: { compostKg:800, neemL:3.5, waterL:7000 }
+        },
+        hi: {
+          title: "बैंगन",
+          fullTitle: "ऑर्गेनिक बैंगन की खेती",
+          timeline: [
+            {t:"मिट्टी", d:"उपजाऊ लोम जिसमें ऑर्गेनिक पदार्थ हो।"},
+            {t:"बुवाई/रोपाई", d:"नर्सरी में बोकर 4–6 सप्ताह के बाद रोपण करें।"},
+            {t:"सिंचाई", d:"नियमित पानी; पानी की कमी से बचें।"},
+            {t:"कीट नियंत्रण", d:"नीम तेल व स्टिकी ट्रैप।"},
+            {t:"कटाई", d:"रोपण के 50–70 दिन बाद (विविधता अनुसार)।"}
+          ],
+          cost: { seeds:1400, manure:2200, irrigation:800, pest:600, expectedProfit:12000 },
+          fertPerAcre: { compostKg:800, neemL:3.5, waterL:7000 }
+        }
+      },
+      mango: {
+        img: "https://images.unsplash.com/photo-1732472581875-89ff83f18439?auto=format&fit=crop&q=80&w=687",
+        en: {
+          title: "Mango",
+          fullTitle: "Organic Mango Farming",
+          timeline: [
+            {t:"Soil", d:"Deep loamy soil with good drainage."},
+            {t:"Planting Time", d:"July–August; pit preparation with compost."},
+            {t:"Fertilizer", d:"Organic compost & cow dung yearly."},
+            {t:"Pest Control", d:"Neem oil sprays and good orchard hygiene."},
+            {t:"Harvest", d:"3–5 years for bearing; harvest season depends on variety."}
+          ],
+          cost: { seeds:8000, manure:2000, irrigation:1500, pest:1000, expectedProfit:25000 },
+          fertPerAcre: { compostKg:2000, neemL:8, waterL:20000 }
+        },
+        hi: {
+          title: "आम",
+          fullTitle: "ऑर्गेनिक आम की खेती",
+          timeline: [
+            {t:"मिट्टी", d:"गहरी लोमी मिट्टी, अच्छी निकासी के साथ।"},
+            {t:"रोपण समय", d:"जुलाई–अगस्त; गड्ढे तैयार कर कम्पोस्ट डालें।"},
+            {t:"उर्वरक", d:"सालाना ऑर्गेनिक कम्पोस्ट व गोबर।"},
+            {t:"कीट नियंत्रण", d:"नीम के छिड़काव व स्वच्छ बगीचा प्रबंधन।"},
+            {t:"फसल", d:"फलदार होने में 3–5 वर्ष; कटाई विविधता पर निर्भर।"}
+          ],
+          cost: { seeds:8000, manure:2000, irrigation:1500, pest:1000, expectedProfit:25000 },
+          fertPerAcre: { compostKg:2000, neemL:8, waterL:20000 }
+        }
+      },
+      orange: {
+        img: "https://images.unsplash.com/photo-1611080626919-7cf5a9dbab5b?auto=format&fit=crop&q=60&w=600",
+        en: {
+          title: "Orange",
+          fullTitle: "Organic Orange Farming",
+          timeline: [
+            {t:"Soil", d:"Well-drained loamy soil."},
+            {t:"Planting", d:"Plant in pits with compost; spacing per variety."},
+            {t:"Irrigation", d:"Regular deep watering during dry months."},
+            {t:"Pest Control", d:"Neem oil and orchard sanitation."},
+            {t:"Harvest", d:"When fruits color and attain size (seasonal)."}
+          ],
+          cost: { seeds:7000, manure:2200, irrigation:1400, pest:900, expectedProfit:20000 },
+          fertPerAcre: { compostKg:1800, neemL:6, waterL:18000 }
+        },
+        hi: {
+          title: "सन्तरा",
+          fullTitle: "ऑर्गेनिक संत्रा की खेती",
+          timeline: [
+            {t:"मिट्टी", d:"अच्छी निचोड़ वाली लोमी मिट्टी।"},
+            {t:"रोपण", d:"गड्ढे में कम्पोस्ट डालकर रोपें; स्थान विविधता अनुसार।"},
+            {t:"सिंचाई", d:"सूखे मौसम में गहरी सिंचाई।"},
+            {t:"कीट नियंत्रण", d:"नीम तेल व बगीचे की सफाई।"},
+            {t:"कटाई", d:"फलों के पकने व रंग आने पर।"}
+          ],
+          cost: { seeds:7000, manure:2200, irrigation:1400, pest:900, expectedProfit:20000 },
+          fertPerAcre: { compostKg:1800, neemL:6, waterL:18000 }
+        }
+      },
+      guava: {
+        img: "https://images.unsplash.com/photo-1689996647327-5d263fbbc79d?auto=format&fit=crop&q=60&w=600",
+        en: {
+          title: "Guava",
+          fullTitle: "Organic Guava Farming",
+          timeline: [
+            {t:"Soil", d:"Well-drained loamy soil."},
+            {t:"Planting", d:"Plant in pits with compost; proper spacing."},
+            {t:"Irrigation", d:"Regular watering during establishment."},
+            {t:"Pest Control", d:"Traps, nipping and neem sprays."},
+            {t:"Harvest", d:"Depending on variety; several months after flowering."}
+          ],
+          cost: { seeds:6000, manure:1800, irrigation:1200, pest:800, expectedProfit:15000 },
+          fertPerAcre: { compostKg:1500, neemL:5, waterL:15000 }
+        },
+        hi: {
+          title: "अमरूद",
+          fullTitle: "ऑर्गेनिक अमरूद की खेती",
+          timeline: [
+            {t:"मिट्टी", d:"अच्छी निचोड़ वाली लोमी मिट्टी।"},
+            {t:"रोपण", d:"गड्ढों में कम्पोस्ट डाल कर रोपें; दूरी का ध्यान।"},
+            {t:"सिंचाई", d:"स्थापना काल में नियमित पानी।"},
+            {t:"कीट नियंत्रण", d:"ट्रैप्स, निपिंग व नीम स्प्रे।"},
+            {t:"कटाई", d:"फूल आने के कुछ महीनों बाद विविधता पर निर्भर।"}
+          ],
+          cost: { seeds:6000, manure:1800, irrigation:1200, pest:800, expectedProfit:15000 },
+          fertPerAcre: { compostKg:1500, neemL:5, waterL:15000 }
+        }
+      },
+      apple: {
+        img: "https://plus.unsplash.com/premium_photo-1661322640130-f6a1e2c36653?auto=format&fit=crop&q=60&w=600",
+        en: {
+          title: "Apple",
+          fullTitle: "Organic Apple Farming",
+          timeline: [
+            {t:"Soil", d:"Well-drained loamy soil (pH 5.5–6.5)."},
+            {t:"Planting Time", d:"Jan–Feb (temperate regions)."},
+            {t:"Fertilizer", d:"FYM ~40 kg per tree annually."},
+            {t:"Irrigation", d:"Twice a week in summer; adjust seasonally."},
+            {t:"Harvest", d:"150–180 days after flowering depending on variety."}
+          ],
+          cost: { seeds:9000, manure:2500, irrigation:1600, pest:1200, expectedProfit:30000 },
+          fertPerAcre: { compostKg:2200, neemL:9, waterL:22000 }
+        },
+        hi: {
+          title: "सेब",
+          fullTitle: "ऑर्गेनिक सेब की खेती",
+          timeline: [
+            {t:"मिट्टी", d:"अच्छी निचोड़ वाली लोमी मिट्टी (pH 5.5–6.5)।"},
+            {t:"रोपण समय", d:"जनवरी–फरवरी (ठंडे क्षेत्र)।"},
+            {t:"उर्वरक", d:"प्रति पेड़ ~40 किग्रा FYM सालाना।"},
+            {t:"सिंचाई", d:"गर्मियों में साप्ताह में दो बार; मौसम अनुसार समायोजित।"},
+            {t:"कटाई", d:"फूल आने के 150–180 दिन बाद विविधता पर निर्भर।"}
+          ],
+          cost: { seeds:9000, manure:2500, irrigation:1600, pest:1200, expectedProfit:30000 },
+          fertPerAcre: { compostKg:2200, neemL:9, waterL:22000 }
+        }
+      },
+      marigold: {
+        img: "https://images.unsplash.com/photo-1661142175513-a5f0871f1ad1?auto=format&fit=crop&q=60&w=600",
+        en: {
+          title: "Marigold",
+          fullTitle: "Marigold (Genda) Farming",
+          timeline: [
+            {t:"Soil", d:"Well-drained soil rich in organic matter."},
+            {t:"Sowing", d:"Sow in nursery and transplant after 3–4 weeks."},
+            {t:"Irrigation", d:"Light watering; avoid waterlogging."},
+            {t:"Pest Control", d:"Manual picking and neem spray."},
+            {t:"Harvest", d:"Flowers ready in 8–10 weeks after transplant."}
+          ],
+          cost: { seeds:800, manure:1200, irrigation:400, pest:300, expectedProfit:5000 },
+          fertPerAcre: { compostKg:400, neemL:1.5, waterL:3000 }
+        },
+        hi: {
+          title: "गेंदे",
+          fullTitle: "गेंदे की खेती",
+          timeline: [
+            {t:"मिट्टी", d:"अच्छी निचोड़ वाली मिट्टी जिसमें ऑर्गेनिक पदार्थ हो।"},
+            {t:"बुवाई", d:"नर्सरी में बोकर 3–4 सप्ताह बाद रोपें।"},
+            {t:"सिंचाई", d:"हल्की सिंचाई; पानी जमा न होने दें।"},
+            {t:"कीट नियंत्रण", d:"हाथ से हटाना व नीम स्प्रे।"},
+            {t:"कटाई", d:"रोपण के 8–10 सप्ताह बाद फूल तैयार।"}
+          ],
+          cost: { seeds:800, manure:1200, irrigation:400, pest:300, expectedProfit:5000 },
+          fertPerAcre: { compostKg:400, neemL:1.5, waterL:3000 }
+        }
+      },
+      rose: {
+        img: "https://images.unsplash.com/photo-1559563362-c667ba5f5480?auto=format&fit=crop&q=60&w=600",
+        en: {
+          title: "Rose",
+          fullTitle: "Rose Farming",
+          timeline: [
+            {t:"Soil", d:"Well-drained, fertile soil."},
+            {t:"Planting", d:"Use healthy saplings; pit + compost."},
+            {t:"Irrigation", d:"Regular watering; mulching helps."},
+            {t:"Pest Control", d:"Pruning, neem sprays."},
+            {t:"Harvest", d:"Cut flowers as per bloom; staggered harvest."}
+          ],
+          cost: { seeds:1500, manure:2000, irrigation:800, pest:600, expectedProfit:8000 },
+          fertPerAcre: { compostKg:600, neemL:2, waterL:5000 }
+        },
+        hi: {
+          title: "गुलाब",
+          fullTitle: "गुलाब की खेती",
+          timeline: [
+            {t:"मिट्टी", d:"अच्छी निचोड़ वाली उपजाऊ मिट्टी।"},
+            {t:"रोपण", d:"स्वस्थ कलम/रोपण का उपयोग; गड्ढे में कम्पोस्ट।"},
+            {t:"सिंचाई", d:"नियमित; मल्चिंग उपयोगी।"},
+            {t:"कीट नियंत्रण", d:"छंटाई व नीम स्प्रे।"},
+            {t:"कटाई", d:"फूलों के खिलने के अनुसार कटाई।"}
+          ],
+          cost: { seeds:1500, manure:2000, irrigation:800, pest:600, expectedProfit:8000 },
+          fertPerAcre: { compostKg:600, neemL:2, waterL:5000 }
+        }
+      },
+      sunflower: {
+        img: "https://plus.unsplash.com/premium_photo-1700124162812-1d5d29087b81?auto=format&fit=crop&q=60&w=600",
+        en: {
+          title: "Sunflower",
+          fullTitle: "Sunflower Farming",
+          timeline: [
+            {t:"Soil", d:"Well-drained loamy soil."},
+            {t:"Sowing", d:"Direct sowing; spacing per variety."},
+            {t:"Irrigation", d:"Moderate; avoid waterlogging."},
+            {t:"Pest Control", d:"Monitor for pests; neem spray."},
+            {t:"Harvest", d:"When back of head turns yellow-brown."}
+          ],
+          cost: { seeds:1200, manure:1800, irrigation:700, pest:500, expectedProfit:7000 },
+          fertPerAcre: { compostKg:700, neemL:2, waterL:6000 }
+        },
+        hi: {
+          title: "सूरजमुखी",
+          fullTitle: "सूरजमुखी की खेती",
+          timeline: [
+            {t:"मिट्टी", d:"अच्छी निचोड़ वाली लोमी मिट्टी।"},
+            {t:"बुवाई", d:"प्रत्यक्ष बुवाई; दूरी विविधता अनुसार।"},
+            {t:"सिंचाई", d:"मध्यम; जलभराव से बचें।"},
+            {t:"कीट नियंत्रण", d:"कीटों के लिए निगरानी व नीम स्प्रे।"},
+            {t:"कटाई", d:"जब सिर का पिछला हिस्सा पीला-भूरा हो जाए।"}
+          ],
+          cost: { seeds:1200, manure:1800, irrigation:700, pest:500, expectedProfit:7000 },
+          fertPerAcre: { compostKg:700, neemL:2, waterL:6000 }
+        }
+      },
+      jasmine: {
+        img: "https://images.unsplash.com/photo-1591353527282-8984ba1a018f?auto=format&fit=crop&q=60&w=600",
+        en: {
+          title: "Jasmine",
+          fullTitle: "Jasmine Farming",
+          timeline: [
+            {t:"Soil", d:"Well-drained fertile soil."},
+            {t:"Planting", d:"Use healthy saplings; prepare pit + compost."},
+            {t:"Irrigation", d:"Regular watering during establishment."},
+            {t:"Pest Control", d:"Prune and use neem sprays."},
+            {t:"Harvest", d:"Pick flowers early morning for best scent."}
+          ],
+          cost: { seeds:900, manure:1400, irrigation:500, pest:400, expectedProfit:6000 },
+          fertPerAcre: { compostKg:500, neemL:1.5, waterL:4000 }
+        },
+        hi: {
+          title: "जैस्मीन",
+          fullTitle: "जैस्मीन की खेती",
+          timeline: [
+            {t:"मिट्टी", d:"अच्छी निचोड़ वाली उपजाऊ मिट्टी।"},
+            {t:"रोपण", d:"स्वस्थ पौधे इस्तेमाल करें; गड्ढे में कम्पोस्ट।"},
+            {t:"सिंचाई", d:"स्थापना के दौरान नियमित पानी।"},
+            {t:"कीट नियंत्रण", d:"छंटाई व नीम स्प्रे।"},
+            {t:"कटाई", d:"सर्वोत्तम सुगंध के लिए सुबह फूल तोड़ें।"}
+          ],
+          cost: { seeds:900, manure:1400, irrigation:500, pest:400, expectedProfit:6000 },
+          fertPerAcre: { compostKg:500, neemL:1.5, waterL:4000 }
+        }
+      }
+    });
+    /* ---------- END full crop data ---------- */
+
+    /************************************************
+     * Utility: escape HTML (simple)
+     ************************************************/
+    function esc(s){ if(!s && s!==0) return ''; return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+
+    /************************************************
+     * Update page texts according to LANG
+     ************************************************/
+    function updatePageTexts() {
+      document.getElementById('headingField').textContent = UI[LANG].fields;
+      document.getElementById('headingVeg').textContent = UI[LANG].veg;
+      document.getElementById('headingFruit').textContent = UI[LANG].fruit;
+      document.getElementById('headingFlowers').textContent = UI[LANG].flowers;
+      document.getElementById('searchInput').placeholder = UI[LANG].searchPlaceholder;
+
+      // update crop labels (keep emoji)
+      document.querySelectorAll('.label').forEach(el => {
+        const key = el.getAttribute('data-label');
+        if(!key) return;
+        const crop = crops[key];
+        if(!crop) return;
+        const name = (LANG === 'en') ? crop.en.title : crop.hi.title;
+        const emoji = el.textContent.trim().split(' ')[0] || '';
+        el.textContent = emoji + ' ' + name;
+      });
+    }
+
+    /************************************************
+     * Modal rendering for local crop (existing)
+     ************************************************/
+    function openCrop(cropKey) {
+      const c = crops[cropKey];
+      if(!c) return;
+      const data = (LANG === 'en') ? c.en : c.hi;
+      const ui = UI[LANG];
+
+      document.getElementById('modalTitle').textContent = data.fullTitle || data.title;
+
+      let timelineHtml = '<div class="timeline">';
+      data.timeline.forEach(step => {
+        timelineHtml += `<div class="step"><strong>${esc(step.t)}</strong><div class="muted" style="color:#556a57;margin-top:4px">${esc(step.d)}</div></div>`;
+      });
+      timelineHtml += '</div>';
+
+      const cost = data.cost;
+      const sumCost = (cost.seeds||0) + (cost.manure||0) + (cost.irrigation||0) + (cost.pest||0);
+      const tableHtml = `
+        <table class="table" role="table" aria-label="Cost table">
+          <thead><tr><th>${esc(ui.total)}</th><th>₹ / acre</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td>${esc(ui.seeds)}</td><td>${esc(cost.seeds)}</td><td></td></tr>
+            <tr><td>${esc(ui.manure)}</td><td>${esc(cost.manure)}</td><td></td></tr>
+            <tr><td>${esc(ui.irrigation)}</td><td>${esc(cost.irrigation)}</td><td></td></tr>
+            <tr><td>${esc(ui.pestControl)}</td><td>${esc(cost.pest)}</td><td></td></tr>
+            <tr><td><strong>${esc(ui.total)}</strong></td><td><strong>${esc(sumCost)}</strong></td><td></td></tr>
+            <tr><td><strong>${esc(ui.expectedProfit)}</strong></td><td colspan="2"><strong>+ ₹ ${esc(cost.expectedProfit)}</strong></td></tr>
+          </tbody>
+        </table>
+      `;
+
+      const calcHtml = `
+        <div class="calculator" id="calculatorRoot">
+          <label for="areaInput">${esc(ui.calcLabel)}</label>
+          <input id="areaInput" type="number" min="0" step="0.01" placeholder="${(LANG==='en')? 'e.g., 2' : 'उदाहरण: 2'}">
+          <button id="calcBtn" class="calc-btn">${esc(ui.calcBtn)}</button>
+          <div id="calcResult" class="result" style="display:none"></div>
+        </div>
+      `;
+
+      const modalBody = document.getElementById('modalBody');
+      modalBody.innerHTML = `
+        <img src="${esc(c.img)}" alt="${esc(data.title)}" class="crop-img">
+        <div class="modal-body">
+          <div>
+            ${timelineHtml}
+            <div style="margin-top:12px">${tableHtml}</div>
+          </div>
+          <div>
+            ${calcHtml}
+          </div>
+        </div>
+      `;
+
+      // show modal
+      const modal = document.getElementById('cropModal');
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden','false');
+
+      // attach calculator
+      document.getElementById('calcBtn').onclick = function(){
+        const areaVal = parseFloat(document.getElementById('areaInput').value || 0);
+        const perAcre = data.fertPerAcre || { compostKg:1000, neemL:5, waterL:9000 };
+        const costs = data.cost || { seeds:0, manure:0, irrigation:0, pest:0 };
+
+        const resultDiv = document.getElementById('calcResult');
+        if(!areaVal || areaVal <= 0){
+          resultDiv.style.display = 'block';
+          resultDiv.innerHTML = `<strong style="color:#c0392b">${esc(UI[LANG].pleaseEnterArea)}</strong>`;
+          return;
+        }
+
+        const compostTotal = Math.round(perAcre.compostKg * areaVal);
+        const neemTotal = +(perAcre.neemL * areaVal).toFixed(2);
+        const waterTotal = Math.round(perAcre.waterL * areaVal);
+        const perAcreSum = (costs.seeds||0) + (costs.manure||0) + (costs.irrigation||0) + (costs.pest||0);
+        const totalCost = Math.round(perAcreSum * areaVal);
+
+        const labelFor = (LANG === 'en') ? `${UI[LANG].resultFor} ${areaVal} acres:` : `${areaVal} एकड़ के लिए:`;
+
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = `
+          <div><strong>${esc(labelFor)}</strong></div>
+          <div style="margin-top:8px">
+            <div>• ${esc(UI[LANG].compost)}: <strong>${compostTotal} kg</strong></div>
+            <div>• ${esc(UI[LANG].neemOil)}: <strong>${neemTotal} L</strong></div>
+            <div>• ${esc(UI[LANG].water)}: <strong>${waterTotal} L</strong></div>
+            <div style="margin-top:8px">• ${esc(UI[LANG].totalCost)}: <strong>₹ ${totalCost}</strong></div>
+          </div>
+        `;
+      };
+    }
+
+    /************************************************
+     * HYBRID SEARCH HANDLER
+     ************************************************/
+    async function handleSearchInput(query) {
+      query = (query || '').trim();
+      if(!query) return;
+
+      const normalized = query.toLowerCase();
+
+      // 1) Try local DB by matching titles (en/hi) or keys
+      let foundKey = null;
+      for(const key in crops){
+        const c = crops[key];
+        const enName = (c.en && c.en.title || '').toLowerCase();
+        const hiName = (c.hi && c.hi.title || '').toLowerCase();
+        if(key === normalized || enName === normalized || hiName === normalized || enName.includes(normalized) || hiName.includes(normalized)){
+          foundKey = key; break;
+        }
+      }
+
+      if(foundKey){
+        openCrop(foundKey);
+        return;
+      }
+
+      // 2) Not local → attempt online backup (Wikipedia). Show a "loading" modal then replace with results.
+      openLoadingModal(query);
+
+      try {
+        // Try English Wikipedia first
+        const enResult = await fetchWikiSummary(query, 'en');
+        // Try Hindi wiki too (best-effort)
+        const hiResult = await fetchWikiSummary(query, 'hi');
+
+        closeModal(); // close loading
+        // Show combined modal with wiki summary(s)
+        openBackupModal(query, enResult, hiResult);
+      } catch (err) {
+        closeModal();
+        openMessageModal(UI[LANG].noInfoFound + " — " + err.message);
+      }
+    }
+
+    // open a simple loading modal
+    function openLoadingModal(q){
+      document.getElementById('modalTitle').textContent = (LANG==='en')? `Searching… "${q}"` : `खोज रहे हैं… "${q}"`;
+      document.getElementById('modalBody').innerHTML = `<div style="padding:18px"><em>${(LANG==='en')? 'Checking local database and online sources...' : 'स्थानीय डेटाबेस और ऑनलाइन स्रोतों की जाँच कर रहे हैं...'}</em></div>`;
+      const modal = document.getElementById('cropModal');
+      modal.classList.add('open'); modal.setAttribute('aria-hidden','false');
+    }
+
+    // close modal helper
+    function closeModal() {
+      const modal = document.getElementById('cropModal');
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden','true');
+      document.getElementById('modalBody').innerHTML = '';
+    }
+
+    // generic message modal
+    function openMessageModal(msg) {
+      document.getElementById('modalTitle').textContent = (LANG==='en')? 'Info' : 'सूचना';
+      document.getElementById('modalBody').innerHTML = `<div style="padding:12px">${esc(msg)}</div>`;
+      const modal = document.getElementById('cropModal');
+      modal.classList.add('open'); modal.setAttribute('aria-hidden','false');
+    }
+
+    // fetch wikipedia summary (language = 'en' or 'hi')
+    async function fetchWikiSummary(title, lang) {
+      const encoded = encodeURIComponent(title.trim());
+      const url = `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encoded}`;
+      const res = await fetch(url, { headers:{ 'Accept': 'application/json' }});
+      if(!res.ok) {
+        // if 404 or not found, return null
+        return null;
+      }
+      const data = await res.json();
+      // data.extract contains summary; data.thumbnail may contain image
+      return {
+        title: data.title || title,
+        extract: data.extract || '',
+        thumbnail: data.thumbnail && data.thumbnail.source || null,
+        source: `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(data.title || title)}`
+      };
+    }
+
+    // open a modal showing online backup results
+    function openBackupModal(query, enResult, hiResult) {
+      const ui = UI[LANG];
+      let bodyHtml = '';
+
+      if(enResult){
+        bodyHtml += `<div class="backup-box">
+          <div class="backup-title">English — ${esc(enResult.title)}</div>
+          <div style="margin-bottom:8px">${esc(enResult.extract)}</div>
+          <div style="font-size:13px;color:#666">Source: <a href="${enResult.source}" target="_blank">${enResult.source}</a></div>
+        </div>`;
+      }
+
+      if(hiResult){
+        bodyHtml += `<div class="backup-box" style="margin-top:10px">
+          <div class="backup-title">हिन्दी — ${esc(hiResult.title)}</div>
+          <div style="margin-bottom:8px">${esc(hiResult.extract)}</div>
+          <div style="font-size:13px;color:#666">स्रोत: <a href="${hiResult.source}" target="_blank">${hiResult.source}</a></div>
+        </div>`;
+      }
+
+      if(!enResult && !hiResult){
+        bodyHtml = `<div style="padding:12px">${esc(ui.noInfoFound)}</div>`;
+        // add optional local note form so user can save custom info locally
+        bodyHtml += `<div class="note-area">
+          <label style="font-weight:700">${esc(ui.addNote)}</label>
+          <textarea id="localNoteText" placeholder="${(LANG==='en')? 'Add helpful info about this crop so it becomes available offline later...' : 'इस फसल के बारे में उपयोगी जानकारी जोड़ें ताकि यह बाद में ऑफ़लाइन उपलब्ध हो सके...' }"></textarea>
+          <button id="saveNoteBtn" class="note-save">${esc(ui.saveNote)}</button>
+          <div id="noteStatus" style="margin-top:8px;color:green;display:none">${esc(ui.noteSaved)}</div>
+        </div>`;
+      } else {
+        // Also give user option to save wiki extract as a simple local note (contribute)
+        bodyHtml += `<div style="margin-top:12px"><button id="saveWikiAsNote" class="note-save">${(LANG==='en')? 'Save this summary as local note' : 'इस सारांश को स्थानीय नोट के रूप में सहेजें'}</button></div>`;
+        bodyHtml += `<div style="margin-top:8px;color:#666;font-size:13px">${(LANG==='en')? 'Note: Saved local notes are stored in your browser (LocalStorage).' : 'नोट: स्थानीय नोट आपके ब्राउज़र (LocalStorage) में सहेजे जाएंगे।'}</div>`;
+      }
+
+      document.getElementById('modalTitle').textContent = (LANG==='en')? `Search: ${query}` : `खोज: ${query}`;
+      document.getElementById('modalBody').innerHTML = bodyHtml;
+      const modal = document.getElementById('cropModal');
+      modal.classList.add('open'); modal.setAttribute('aria-hidden','false');
+
+      // attach save note handler(s)
+      const saveBtn = document.getElementById('saveNoteBtn');
+      if(saveBtn){
+        saveBtn.onclick = function(){
+          const text = document.getElementById('localNoteText').value.trim();
+          if(!text) return alert((LANG==='en')? 'Please write something first.' : 'कृपया पहले कुछ लिखें।');
+          // store in localStorage under key 'local_notes' as object { query: text, lang }
+          const notes = JSON.parse(localStorage.getItem('local_notes' || '{}')) || {};
+          notes[query.toLowerCase()] = { text, lang: LANG, date: new Date().toISOString() };
+          localStorage.setItem('local_notes', JSON.stringify(notes));
+          document.getElementById('noteStatus').style.display='block';
+        };
+      }
+
+      const saveWikiBtn = document.getElementById('saveWikiAsNote');
+      if(saveWikiBtn){
+        saveWikiBtn.onclick = function(){
+          const textToSave = (enResult && enResult.extract) ? enResult.extract : ((hiResult && hiResult.extract) ? hiResult.extract : '');
+          if(!textToSave) return alert((LANG==='en')? 'Nothing to save.' : 'सहेज़ने के लिए कुछ नहीं है।');
+          const notes = JSON.parse(localStorage.getItem('local_notes' || '{}')) || {};
+          notes[query.toLowerCase()] = { text: textToSave, lang: 'en/wiki', date: new Date().toISOString() };
+          localStorage.setItem('local_notes', JSON.stringify(notes));
+          alert((LANG==='en')? 'Saved as local note.' : 'स्थानीय नोट के रूप में सहेजा गया।');
+        };
+      }
+    }
+
+    /************************************************
+     * Attach event listeners
+     ************************************************/
+    // open crop by clicking items
+    document.querySelectorAll('.item').forEach(el => {
+      el.addEventListener('click', function(){
+        const cropKey = this.getAttribute('data-crop');
+        if(cropKey) openCrop(cropKey);
+      });
+    });
+
+    // close modal
+    document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+    document.getElementById('cropModal').addEventListener('click', function(e){
+      if(e.target === this) closeModal();
+    });
+    window.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeModal(); });
+
+    // language toggle: switch LANG and update labels; if modal open and it's a local crop, re-open in new language
+    document.getElementById('langToggle').addEventListener('click', function(){
+      LANG = (LANG === 'en') ? 'hi' : 'en';
+      updatePageTexts();
+      // if modal open and it's local content, try to re-render based on currently visible modal title
+      const modal = document.getElementById('cropModal');
+      if(modal.classList.contains('open')){
+        const currentTitle = document.getElementById('modalTitle').textContent || '';
+        // find matching crop by either fullTitle or title in either language
+        let matched = null;
+        for(const k in crops){
+          const c = crops[k];
+          if(currentTitle === c.en.fullTitle || currentTitle === c.hi.fullTitle || currentTitle === c.en.title || currentTitle === c.hi.title){
+            matched = k; break;
+          }
+        }
+        if(matched) openCrop(matched);
+        else {
+          // leave visible modal as-is (it might be an online summary); no re-fetch to avoid extra network calls
+        }
+      }
+    });
+
+    // search button & input Enter handling
+    document.getElementById('searchBtn').addEventListener('click', function(){
+      const q = document.getElementById('searchInput').value || '';
+      handleSearchInput(q);
+    });
+    document.getElementById('searchInput').addEventListener('keydown', function(e){
+      if(e.key === 'Enter') {
+        const q = this.value || '';
+        handleSearchInput(q);
+      }
+    });
+
+    // initial UI text set
+    updatePageTexts();
+
+    /************************************************
+     * Final note:
+     * - This hybrid approach uses LocalStorage to save quick user notes.
+     * - Online backup uses Wikipedia summary endpoints (en/hi). You can replace fetchWikiSummary's URL to hit another API.
+     ************************************************/
+  </script>
+</body>
+</html>

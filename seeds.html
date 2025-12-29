@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Farmer Friendly - Seeds</title>
+<style>
+  body{font-family:'Poppins',Arial,Helvetica,sans-serif;background:#f6fff7;color:#2e3d29;margin:0;padding:0;}
+  header{background:#2e8b57;color:#fff;padding:15px 0;text-align:center;}
+  .header-inner{display:flex;align-items:center;justify-content:space-between;max-width:1100px;margin:0 auto;padding:0 16px;}
+  header .logo{font-weight:700;font-size:28px;}
+  nav{margin-top:10px;}
+  nav a{color:#fff;text-decoration:none;margin:0 15px;font-size:17px;padding:6px 12px;border-radius:5px;}
+  nav a:hover, nav a.active{background:rgba(255,255,255,0.2);}
+  main{padding:20px;}
+  .grid{display:flex;flex-wrap:wrap;gap:18px;margin-top:20px;justify-content:center}
+  .card{width:230px;background:#fff;border-radius:10px;box-shadow:0 4px 10px rgba(0,0,0,0.08);overflow:hidden;text-align:center;padding-bottom:12px}
+  .card img{width:100%;height:150px;object-fit:cover}
+  .card h3{color:#2e8b57;margin:10px 0}
+  .price{font-weight:700;color:#2e8b57;margin-bottom:8px}
+  .btn{display:inline-block;padding:8px 12px;border-radius:6px;border:none;cursor:pointer;margin:6px 6px 0 6px}
+  .buy{background:#28a745;color:#fff}
+  .edit{background:#ffc107}  MongoDB connected
+  
+  #addBtn{position:fixed;right:20px;bottom:20px;background:#2e8b57;color:#fff;padding:14px;border-radius:50%;border:none;box-shadow:0 6px 18px rgba(0,0,0,0.18);cursor:pointer;font-size:18px}
+  /* modals */
+  .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);justify-content:center;align-items:center;padding:20px}
+  .modal .box{background:#fff;border-radius:10px;padding:18px;width:100%;max-width:420px;box-shadow:0 8px 30px rgba(0,0,0,0.2)}
+  .modal .close{float:right;cursor:pointer;background:#eee;border-radius:6px;padding:4px 8px}
+  input[type=text], input[type=number], select{width:100%;padding:8px;margin:8px 0;border-radius:6px;border:1px solid #ddd}
+  /* cart badge */
+  #cartBtn{position:fixed;left:20px;top:20px;background:#fff;padding:10px 14px;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,0.12);cursor:pointer}
+  #cartCount{font-weight:700;color:#2e8b57}
+  /* small responsive */
+  @media(max-width:520px){.card{width:46%}}
+  @media(max-width:360px){.card{width:100%}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">Farmer Friendly 🌿</div>
+    <nav>
+      <a href="index.html">HOME</a>
+      <a href="about.html">ABOUT</a>
+      <a href="crop-guide.html">CROP GUIDE</a>
+      <a href="purchase.html">PURCHASE</a>
+      <a href="weather.html">WEATHER</a>
+      <a href="contact.html">CONTACT</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="grid" id="seedGrid"></div>
+</main>
+
+<button id="addBtn" title="Add Seed" onclick="openAddModal()">+</button>
+
+<!-- ADD / EDIT MODAL -->
+<div class="modal" id="addModal">
+  <div class="box">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3 id="addTitle">Add Seed</h3>
+      <button class="close" onclick="closeAddModal()">✕</button>
+    </div>
+    <input id="seedName" type="text" placeholder="Seed Name">
+    <input id="seedPrice" type="number" placeholder="Price (₹)" min="0">
+    <input id="seedImg" type="text" placeholder="Image URL (optional)">
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+      <button class="btn" onclick="closeAddModal()">Cancel</button>
+      <button class="btn buy" onclick="saveSeed()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- BUY Modal -->
+<div class="modal" id="buyModal">
+  <div class="box">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3>Buy Seed</h3>
+      <button class="close" onclick="closeBuyModal()">✕</button>
+    </div>
+    <p><strong id="buyName"></strong></p>
+    <p>Price per kg: ₹<span id="buyPrice"></span></p>
+    <label>Quantity (kg)</label>
+    <select id="buyQty" onchange="updateBuyTotal()">
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="5">5</option>
+      <option value="10">10</option>
+    </select>
+    <p style="margin-top:8px">Total: ₹ <span id="buyTotal">0</span></p>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px">
+      <button class="btn" onclick="closeBuyModal()">Cancel</button>
+      <button class="btn buy" onclick="confirmBuy()">Buy Now</button>
+    </div>
+  </div>
+</div>
+
+<!-- CART Modal -->
+<div class="modal" id="cartModal">
+  <div class="box">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3>Your Cart</h3>
+      <button class="close" onclick="closeCart()">✕</button>
+    </div>
+    <div id="cartItems"></div>
+    <hr>
+    <p style="text-align:right">Grand Total: ₹ <span id="cartTotal">0</span></p>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px">
+      <button class="btn" onclick="clearCart()">Clear Cart</button>
+      <button class="btn buy" onclick="checkout()">Checkout</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== Data & initialization ===== */
+const defaultSeeds = [
+  {name:"Rice Seeds", price:150, img:"https://digicastnegros.com/wp-content/uploads/2023/01/image-334.png"},
+  {name:"Wheat Seeds", price:130, img:"https://tse2.mm.bing.net/th/id/OIP.Rye5EUROhopi_54AXy0xJwHaFW?pid=Api&h=220&P=0"},
+  {name:"Corn Seeds", price:120, img:"https://tse3.mm.bing.net/th/id/OIP.TX9pOjqiFLnrLWngRhO6BgHaHa?pid=Api&h=220&P=0"},
+  {name:"Soya Bean", price:180, img:"https://tse2.mm.bing.net/th/id/OIP.6KT7kaOJWAM04FhDuOqtUgHaHa?pid=Api&h=220&P=0"}
+];
+
+let seeds = JSON.parse(localStorage.getItem('seeds')) || defaultSeeds.slice(); // clone
+let cart = JSON.parse(localStorage.getItem('cart')) || [];
+let editingIndex = null;
+let buyingIndex = null;
+
+/* ===== Helpers ===== */
+function saveSeedsToStorage(){ localStorage.setItem('seeds', JSON.stringify(seeds)); }
+function saveCartToStorage(){ localStorage.setItem('cart', JSON.stringify(cart)); updateCartCount(); }
+function updateCartCount(){ document.getElementById('cartCount').innerText = cart.length; }
+
+/* ===== Render seeds ===== */
+function renderSeeds(){
+  const container = document.getElementById('seedGrid');
+  container.innerHTML = '';
+  seeds.forEach((s, i) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <img src="${s.img || 'https://via.placeholder.com/300x150?text=No+Image'}" alt="${s.name}">
+      <h3>${s.name}</h3>
+      <div class="price">₹ ${s.price} / kg</div>
+      <div style="display:flex;justify-content:center;flex-wrap:wrap">
+        <button class="btn buy" onclick="openBuy(${i})">Buy Now</button>
+        <button class="btn edit" onclick="openEdit(${i})">Edit</button>
+        <button class="btn del" onclick="deleteSeed(${i})">Remove</button>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+/* ===== Add / Edit ===== */
+function openAddModal(){
+  editingIndex = null;
+  document.getElementById('addTitle').innerText = 'Add Seed';
+  document.getElementById('seedName').value = '';
+  document.getElementById('seedPrice').value = '';
+  document.getElementById('seedImg').value = '';
+  document.getElementById('addModal').style.display = 'flex';
+}
+function closeAddModal(){ document.getElementById('addModal').style.display = 'none'; }
+
+function saveSeed(){
+  const name = document.getElementById('seedName').value.trim();
+  const price = parseFloat(document.getElementById('seedPrice').value);
+  let img = document.getElementById('seedImg').value.trim();
+
+  if(!name || !price){ alert('Name and Price required'); return; }
+  if(!img) img = ''; // allow blank -> placeholder
+
+  if(editingIndex === null){
+    seeds.push({name, price, img});
+  } else {
+    seeds[editingIndex] = {name, price, img};
+  }
+  saveSeedsToStorage();
+  renderSeeds();
+  closeAddModal();
+}
+
+function openEdit(i){
+  editingIndex = i;
+  const s = seeds[i];
+  document.getElementById('addTitle').innerText = 'Edit Seed';
+  document.getElementById('seedName').value = s.name;
+  document.getElementById('seedPrice').value = s.price;
+  document.getElementById('seedImg').value = s.img;
+  document.getElementById('addModal').style.display = 'flex';
+}
+
+function deleteSeed(i){
+  if(!confirm('Remove this seed?')) return;
+  seeds.splice(i,1);
+  saveSeedsToStorage();
+  renderSeeds();
+}
+
+
+function openBuy(i){
+  buyingIndex = i;
+  const s = seeds[i];
+  document.getElementById('buyName').innerText = s.name;
+  document.getElementById('buyPrice').innerText = s.price;
+  document.getElementById('buyQty').value = '1';
+  updateBuyTotal();
+  document.getElementById('buyModal').style.display = 'flex';
+}
+function closeBuyModal(){ document.getElementById('buyModal').style.display = 'none'; }
+function updateBuyTotal(){
+  const qty = parseFloat(document.getElementById('buyQty').value || 1);
+  const price = parseFloat(document.getElementById('buyPrice').innerText || 0);
+  document.getElementById('buyTotal').innerText = (qty * price).toFixed(2);
+}
+function confirmBuy(){
+  const qty = parseFloat(document.getElementById('buyQty').value || 1);
+  const s = seeds[buyingIndex];
+  const order = {
+    items: [{ name: s.name, price: s.price, qty }],
+    total: parseFloat((s.price * qty).toFixed(2)),
+    customer: {}
+  };
+
+  fetch('http://localhost:5000/api/orders', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(order)
+  })
+  .then(res => res.json())
+  .then(data => {
+    closeBuyModal();
+    alert('Purchase successful! Order id: ' + (data._id || 'N/A'));
+  })
+  .catch(err => {
+    console.error(err);
+    alert('Purchase failed. Try again.');
+  });
+}
+
+/* ===== Cart modal ===== */
+function openCart(){
+  renderCart();
+  document.getElementById('cartModal').style.display = 'flex';
+}
+function closeCart(){ document.getElementById('cartModal').style.display = 'none'; }
+
+function renderCart(){
+  const list = document.getElementById('cartItems');
+  list.innerHTML = '';
+  if(cart.length === 0){
+    list.innerHTML = '<p>Your cart is empty.</p>';
+    document.getElementById('cartTotal').innerText = '0';
+    updateCartCount();
+    return;
+  }
+  let total = 0;
+  cart.forEach((c, idx) => {
+    const itemDiv = document.createElement('div');
+    itemDiv.style.display = 'flex';
+    itemDiv.style.gap = '10px';
+    itemDiv.style.alignItems = 'center';
+    itemDiv.style.marginBottom = '10px';
+    itemDiv.innerHTML = `
+      <img src="${c.img || 'https://via.placeholder.com/80x50'}" style="width:80px;height:50px;object-fit:cover;border-radius:6px">
+      <div style="flex:1">
+        <div><strong>${c.name}</strong></div>
+        <div>₹ ${c.price} / kg</div>
+        <div style="margin-top:6px">Qty: 
+          <select onchange="changeQty(${idx}, this.value)">
+            <option ${c.qty==1? 'selected' : ''} value="1">1</option>
+            <option ${c.qty==2? 'selected' : ''} value="2">2</option>
+            <option ${c.qty==5? 'selected' : ''} value="5">5</option>
+            <option ${c.qty==10? 'selected' : ''} value="10">10</option>
+          </select>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div>₹ ${(c.price * c.qty).toFixed(2)}</div>
+        <button class="btn del" style="margin-top:8px" onclick="removeCartItem(${idx})">Remove</button>
+      </div>
+    `;
+    list.appendChild(itemDiv);
+    total += (c.price * c.qty);
+  });
+  document.getElementById('cartTotal').innerText = total.toFixed(2);
+  updateCartCount();
+}
+
+function changeQty(index, val){
+  cart[index].qty = parseFloat(val);
+  saveCartToStorage();
+  renderCart();
+}
+function removeCartItem(index){
+  cart.splice(index,1);
+  saveCartToStorage();
+  renderCart();
+}
+function clearCart(){
+  if(!confirm('Clear the cart?')) return;
+  cart = [];
+  saveCartToStorage();
+  renderCart();
+}
+
+/* ===== Checkout (simple) ===== */
+function checkout(){
+  if(cart.length === 0){ alert('Cart empty'); return; }
+  // send cart as order to backend
+  const items = cart.map(c => ({ name: c.name, price: c.price, qty: c.qty }));
+  const total = parseFloat(cart.reduce((s, c) => s + c.price * c.qty, 0).toFixed(2));
+  const order = { items, total, customer: {} };
+
+  fetch('http://localhost:5000/api/orders', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(order)
+  })
+  .then(res => res.json())
+  .then(data => {
+    alert('Order placed successfully! Order id: ' + (data._id || 'N/A'));
+    cart = [];
+    saveCartToStorage();
+    renderCart();
+    closeCart();
+  })
+  .catch(err => {
+    console.error(err);
+    alert('Checkout failed. Try again.');
+  });
+}
+
+/* ===== Modal click outside to close ===== */
+window.addEventListener('click', function(e){
+  ['addModal','buyModal','cartModal'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el && el.style.display === 'flex' && !el.querySelector('.box').contains(e.target) && e.target === el){
+      el.style.display = 'none';
+    }
+  });
+});
+
+/* ===== Init ===== */
+document.addEventListener('DOMContentLoaded', function(){
+  renderSeeds();
+  updateCartCount();
+});
+</script>
+</body>
+</html>

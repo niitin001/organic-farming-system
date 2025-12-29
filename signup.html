@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sign Up</title>
+  <style>
+    body {
+      background: #0b3f0d;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: Arial;
+    }
+
+    .box {
+      background: white;
+      width: 360px;
+      padding: 25px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .box h2 {
+      margin-bottom: 15px;
+    }
+
+    input {
+      width: 90%;
+      margin: 8px 0;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #aaa;
+    }
+
+    button {
+      width: 85%;
+      padding: 10px;
+      background: #0b3f0d;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    p span {
+      color: blue;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="box">
+    <h2>Create Your Account</h2>
+
+    <input type="text" id="name" placeholder="Full Name" required>
+    <input type="email" id="email" placeholder="Enter Email" required>
+    <input type="password" id="password" placeholder="Create Password" required>
+
+    <button onclick="signup()">Sign Up</button>
+
+    <p>Already have an account? 
+      <span onclick="window.location.href='login.html'">Login</span>
+    </p>
+  </div>
+
+  <script>
+    function signup() {
+      // store user in localStorage
+      localStorage.setItem("name", document.getElementById("name").value);
+      localStorage.setItem("email", document.getElementById("email").value);
+      localStorage.setItem("password", document.getElementById("password").value);
+
+      alert("Account Created Successfully!");
+
+      // redirect to homepage
+      window.location.href = "index.html";
+    }
+  </script>
+
+</body>
+</html>
