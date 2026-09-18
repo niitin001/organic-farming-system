@@ -3,416 +3,342 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Farmer Friendly</title>
-
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Poppins', sans-serif;
-      background: #f5fff5;
-    }
-
-    header {
-      background: #2e8b57;
-      color: white;
-      padding: 15px 0;
-      text-align: center;
-    }
-
-    .header-inner{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      max-width:1100px;
-      margin:0 auto;
-      padding:0 16px;
-    }
-
-    .logo {
-      font-size: 28px;
-      font-weight: bold;
-    }
-
-    nav {
-      margin-top: 10px;
-    }
-
-    nav a {
-      color: white;
-      text-decoration: none;
-      margin: 0 15px;
-      font-size: 17px;
-      padding: 6px 12px;
-      border-radius: 5px;
-    }
-
-    nav a:hover, nav a.active {
-      background: rgba(255,255,255,0.2);
-    }
-
-    /* Slider */
-    .slider {
-      width: 100%;
-      height: 340px;
-      overflow: hidden;
-      position: relative;
-    }
-
-    .slides img {
-      width: 100%;
-      height: 340px;
-      object-fit: cover;
-      display: none;
-    }
-
-    .slides img.active {
-      display: block;
-    }
-
-    .dots {
-      text-align: center;
-      margin-top: 10px;
-    }
-
-    .dot {
-      display: inline-block;
-      width: 12px;
-      height: 12px;
-      background: #bbb;
-      border-radius: 50%;
-      margin: 5px;
-      cursor: pointer;
-    }
-
-    .dot.active {
-      background: #2e8b57;
-    }
-
-    /* About Section */
-    .about {
-      padding: 30px;
-      text-align: center;
-      background: white;
-    }
-
-    .about h2 {
-      color: #2e8b57;
-      font-size: 30px;
-    }
-
-    .about p {
-      max-width: 750px;
-      margin: auto;
-      font-size: 17px;
-      line-height: 1.7;
-    }
-
-    /* Cards */
-    .features {
-      padding: 20px;
-      text-align: center;
-    }
-
-    .cards {
-      display: flex;
-      justify-content: center;
-      gap: 30px;
-      margin-top: 20px;
-      flex-wrap: wrap;
-    }
-
-    .card {
-      width: 260px;
-      background: white;
-      border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      text-decoration: none;
-      color: black;
-      overflow: hidden;
-      transition: 0.3s;
-    }
-
-    .card img {
-      width: 100%;
-      height: 160px;
-      object-fit: cover;
-    }
-
-    .card-title {
-      padding: 10px;
-      font-size: 18px;
-      color: #2e8b57;
-      font-weight: bold;
-    }
-
-    .card:hover {
-      transform: scale(1.05);
-    }
-
-    /* Footer */
-    .footer {
-      background: #2e8b57;
-      color: white;
-      text-align: center;
-      padding: 15px;
-      margin-top: 40px;
-    }
-
-    .social a {
-      color: white;
-      margin: 0 10px;
-      font-size: 20px;
-      text-decoration: none;
-    }
-
-    /* Auth overlay (blocks site until login/signup) */
-    .auth-overlay{
-      position:fixed;
-      inset:0;
-      background:rgba(0,0,0,0.45);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      z-index:9999;
-    }
-    .auth-card{
-      background:#fff;
-      border-radius:10px;
-      width:100%;
-      max-width:420px;
-      padding:20px;
-      box-shadow:0 10px 40px rgba(0,0,0,0.35);
-    }
-    .auth-card h2{margin:0 0 8px;color:#2e8b57}
-    .auth-card label{display:block;font-size:13px;color:#555;margin:10px 0 6px}
-    .auth-card input{width:100%;padding:10px;border-radius:8px;border:1px solid #e6ede6;font-size:15px}
-    .auth-card .btn{margin-top:12px;background:#2e8b57;color:#fff;padding:10px;border-radius:8px;border:0;cursor:pointer;font-weight:600;width:100%}
-    .auth-card .link{background:none;border:0;color:#2e8b57;cursor:pointer;padding:0;margin-left:6px}
-    .auth-small{font-size:13px;color:#666;margin-top:8px;text-align:center}
-    .auth-msg{font-size:14px;color:green;margin-top:10px;text-align:center}
-    .auth-err{font-size:14px;color:#d9534f;margin-top:10px;text-align:center}
-
-    @media (max-width:880px){
-      .header-inner{padding:0 12px}
-    }
-  </style>
+  <meta name="description" content="Farmer Friendly — smart tools, crop guidance, weather and organic farming resources in one place.">
+  <title>Farmer Friendly | Smart Organic Farming</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
 </head>
-
-
 <body>
 
-  <!-- Header -->
-  <header>
-    <div class="header-inner">
-      <div class="logo">Farmer Friendly 🌿</div>
-      <div>
-        <nav style="display:inline-block">
-          <a href="index.html" class="active">HOME</a>
-          <a href="about.html">ABOUT</a>
-          <a href="crop-guide.html">CROP GUIDE</a>
-          <a href="purchase.html">PURCHASE</a>
-          <a href="weather.html">WEATHER</a>
-          <a href="contact.html">CONTACT</a>
-        </nav>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-mark">🌱</span>
+      <span><strong>Farmer</strong> Friendly</span>
+    </a>
+    <nav class="main-nav" aria-label="Main navigation">
+      <a href="index.html" class="active">Home</a>
+      <a href="crop-guide.html">Crop Guide</a>
+      <a href="weather.html">Weather</a>
+      <a href="purchase.html">Marketplace</a>
+      <a href="about.html">About</a>
+      <a href="contact.html" class="nav-contact">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero" id="hero">
+    <div class="hero-slider">
+      <div class="hero-slide active" style="background-image:url('https://images.unsplash.com/photo-1500937386664-56d1dfef3854?q=85&w=1800&auto=format&fit=crop')"></div>
+      <div class="hero-slide" style="background-image:url('https://images.unsplash.com/photo-1464226184884-fa280b87c399?q=85&w=1800&auto=format&fit=crop')"></div>
+      <div class="hero-slide" style="background-image:url('https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=85&w=1800&auto=format&fit=crop')"></div>
+      <div class="hero-overlay"></div>
+    </div>
+
+    <div class="hero-content container">
+      <div class="eyebrow"><span></span> SMART FARMING • ORGANIC LIVING</div>
+      <h1>Grow smarter.<br><em>Farm better.</em></h1>
+      <p>Practical crop guidance, soil insights, live weather and a simple farming marketplace — designed to put useful information in one place.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="crop-guide.html">Explore Crop Guide <span>→</span></a>
+        <a class="btn btn-ghost" href="weather.html">Check Weather</a>
+      </div>
+      <div class="hero-trust">
+        <div><strong>4+</strong><span>farming tools</span></div>
+        <i></i>
+        <div><strong>3</strong><span>crop seasons</span></div>
+        <i></i>
+        <div><strong>24/7</strong><span>web access</span></div>
       </div>
     </div>
-  </header>
 
-  <!-- Slider -->
-  <div class="slider" id="slider" aria-hidden="false">
-    <div class="slides">
-      <img src="https://i.ytimg.com/vi/lRyXlvIJFWI/maxresdefault.jpg" class="slide active" alt="">
-      <img src="https://agriculturegoods.com/wp-content/uploads/2023/05/Smart-farming.gif" class="slide" alt="">
-      <img src="https://wallpaperaccess.com/full/13431654.jpg" class="slide" alt="">
-      <img src="https://plus.unsplash.com/premium_photo-1661854008793-8ce54b2e622b?q=80&w=1169" class="slide" alt="">
-      <img src="https://images.unsplash.com/photo-1511690656952-34342bb7c2f2?q=80&w=1470" class="slide" alt="">
+    <div class="slider-controls">
+      <button class="slider-arrow" id="prevSlide" aria-label="Previous slide">←</button>
+      <div class="slider-dots">
+        <button class="slider-dot active" data-slide="0" aria-label="Slide 1"></button>
+        <button class="slider-dot" data-slide="1" aria-label="Slide 2"></button>
+        <button class="slider-dot" data-slide="2" aria-label="Slide 3"></button>
+      </div>
+      <button class="slider-arrow" id="nextSlide" aria-label="Next slide">→</button>
     </div>
+  </section>
 
-    <div class="dots" aria-hidden="false">
-      <span class="dot active"></span>
-      <span class="dot"></span>
-      <span class="dot"></span>
-      <span class="dot"></span>
-      <span class="dot"></span>
+  <section class="quick-strip">
+    <div class="container quick-grid">
+      <a href="crop-guide.html" class="quick-item">
+        <span class="quick-icon">🌾</span>
+        <div><small>PLAN</small><strong>Choose the right crop</strong></div>
+        <span class="quick-arrow">↗</span>
+      </a>
+      <a href="soil.html" class="quick-item">
+        <span class="quick-icon">🪨</span>
+        <div><small>UNDERSTAND</small><strong>Match crop with soil</strong></div>
+        <span class="quick-arrow">↗</span>
+      </a>
+      <a href="weather.html" class="quick-item">
+        <span class="quick-icon">☁️</span>
+        <div><small>MONITOR</small><strong>Check local weather</strong></div>
+        <span class="quick-arrow">↗</span>
+      </a>
+      <a href="purchase.html" class="quick-item">
+        <span class="quick-icon">🛒</span>
+        <div><small>SOURCE</small><strong>Explore farm products</strong></div>
+        <span class="quick-arrow">↗</span>
+      </a>
+    </div>
+  </section>
+
+  <section class="intro-section container">
+    <div class="section-kicker">WHY FARMER FRIENDLY</div>
+    <div class="intro-grid">
+      <div>
+        <h2>One simple place for<br><span>smarter farming decisions.</span></h2>
+      </div>
+      <div>
+        <p>Traditional farming knowledge becomes more useful when it is easy to access. Farmer Friendly brings everyday digital tools together so farmers and students can explore crops, seasons, soil, weather and resources without jumping between different platforms.</p>
+        <a href="about.html" class="text-link">Discover our vision <span>→</span></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="tools-section">
+    <div class="container">
+      <div class="section-heading">
+        <div>
+          <div class="section-kicker">FARMING TOOLKIT</div>
+          <h2>Everything you need,<br><span>right at your fingertips.</span></h2>
+        </div>
+        <p>Explore the core tools of the platform.</p>
+      </div>
+
+      <div class="tool-grid">
+        <a href="crop-guide.html" class="tool-card tool-featured">
+          <div class="tool-top"><span class="tool-number">01</span><span class="tool-icon">🌾</span></div>
+          <h3>Crop Guide</h3>
+          <p>Discover crop information, growing duration, soil needs and practical farming guidance.</p>
+          <span class="card-link">Explore guide <b>↗</b></span>
+        </a>
+
+        <a href="season.html" class="tool-card">
+          <div class="tool-top"><span class="tool-number">02</span><span class="tool-icon">☀️</span></div>
+          <h3>Season Wise</h3>
+          <p>Understand Kharif, Rabi and Zaid seasons with crop-specific information.</p>
+          <span class="card-link">View seasons <b>↗</b></span>
+        </a>
+
+        <a href="soil.html" class="tool-card">
+          <div class="tool-top"><span class="tool-number">03</span><span class="tool-icon">🌱</span></div>
+          <h3>Soil Insights</h3>
+          <p>Learn how different soil types connect with crop selection and cultivation.</p>
+          <span class="card-link">Explore soil <b>↗</b></span>
+        </a>
+
+        <a href="weather.html" class="tool-card">
+          <div class="tool-top"><span class="tool-number">04</span><span class="tool-icon">🌦️</span></div>
+          <h3>Live Weather</h3>
+          <p>Check current weather conditions for a city through the platform's weather service.</p>
+          <span class="card-link">Check weather <b>↗</b></span>
+        </a>
+
+        <a href="purchase.html" class="tool-card">
+          <div class="tool-top"><span class="tool-number">05</span><span class="tool-icon">🛍️</span></div>
+          <h3>Marketplace</h3>
+          <p>Browse farming supplies and explore the purchase experience in one place.</p>
+          <span class="card-link">Open marketplace <b>↗</b></span>
+        </a>
+
+        <a href="contact.html" class="tool-card dark-card">
+          <div class="tool-top"><span class="tool-number">06</span><span class="tool-icon">💬</span></div>
+          <h3>Farmer Support</h3>
+          <p>Have a question or suggestion? Connect with the Farmer Friendly team.</p>
+          <span class="card-link">Get in touch <b>↗</b></span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="season-banner">
+    <div class="container season-inner">
+      <div>
+        <div class="section-kicker light">BUILT AROUND FARMING</div>
+        <h2>From soil to season,<br><span>make every choice count.</span></h2>
+      </div>
+      <a href="season.html" class="btn btn-light">Explore farming seasons <span>→</span></a>
+    </div>
+  </section>
+
+  <section class="cta-section container">
+    <div class="cta-card">
+      <div>
+        <span class="cta-badge">🌿 FARMER FRIENDLY</span>
+        <h2>Ready to explore<br>smarter farming?</h2>
+        <p>Start with the Crop Guide or check today's weather for your location.</p>
+      </div>
+      <div class="cta-actions">
+        <a class="btn btn-primary" href="crop-guide.html">Start Exploring <span>→</span></a>
+        <a class="btn btn-outline" href="weather.html">View Weather</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-grid">
+    <div>
+      <a class="brand footer-brand" href="index.html"><span class="brand-mark">🌱</span><span><strong>Farmer</strong> Friendly</span></a>
+      <p>Digital tools for practical, sustainable and informed farming.</p>
+    </div>
+    <div>
+      <h4>Explore</h4>
+      <a href="crop-guide.html">Crop Guide</a>
+      <a href="season.html">Seasons</a>
+      <a href="soil.html">Soil</a>
+      <a href="weather.html">Weather</a>
+    </div>
+    <div>
+      <h4>Platform</h4>
+      <a href="purchase.html">Marketplace</a>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+    </div>
+    <div>
+      <h4>Project</h4>
+      <p>Full-stack farming platform</p>
+      <p>Node.js • Express • PostgreSQL</p>
+      <p>JWT Authentication</p>
     </div>
   </div>
+  <div class="container footer-bottom">
+    <span>© 2026 Farmer Friendly</span>
+    <span>Built for a smarter farming experience 🌱</span>
+  </div>
+</footer>
 
-  <!-- About Section -->
-  <section class="about">
-    <h2>About Us</h2>
-    <p>
-      We are passionate about empowering farmers with the tools, knowledge, and resources
-      they need to succeed. Our vision is to combine traditional farming practices with
-      modern technology to create a smarter and more sustainable future.
-    </p>
-  </section>
-
-  <!-- Cards Section -->
-  <section class="features">
-    <h3>See More Details:</h3>
-
-    <div class="cards">
-      <a href="season.html" class="card">
-        <img src="https://i.ytimg.com/vi/DwHjlEEL6nQ/maxresdefault.jpg" alt="">
-        <div class="card-title">Season Wise</div>
-      </a>
-
-      <a href="soil.html" class="card">
-        <img src="https://tse4.mm.bing.net/th/id/OIP.c7yO9jslyAZgEe7r2IvyhwHaGN?pid=Api&P=0&h=220" alt="">
-        <div class="card-title">Soil Type</div>
-      </a>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer class="footer">
-    <p>Email: lodhinitin2005@gmail.com</p>
-    <p>Phone: 9755952808 / 9406558405</p>
-
-    <div class="social">
-      <a href="#">🌐</a>
-      <a href="#">📸</a>
-      <a href="#">💼</a>
-    </div>
-  </footer>
-
-  <!-- Auth overlay (appears until user logs in / signs up) -->
-  <div id="authOverlay" class="auth-overlay" style="display:none" role="dialog" aria-modal="true">
-    <div class="auth-card" role="document">
-      <h2 id="authTitle">Sign up</h2>
-      <p id="authLead" class="auth-small">Site use karne se pehle apna account banayein. Bad me login kar sakte hain.</p>
-
-      <form id="authForm" autocomplete="off">
-        <div id="nameField">
-          <label for="authName">Naam</label>
-          <input id="authName" name="name" />
-        </div>
-
-        <label for="authEmail">Email</label>
-        <input id="authEmail" name="email" type="email" required />
-
+<div id="authOverlay" class="auth-overlay" style="display:none" role="dialog" aria-modal="true">
+  <div class="auth-card">
+    <div class="auth-brand">🌱 <span>Farmer Friendly</span></div>
+    <div class="auth-kicker">WELCOME</div>
+    <h2 id="authTitle">Create your account</h2>
+    <p id="authLead">Create an account to explore the complete farming toolkit.</p>
+    <form id="authForm" autocomplete="off">
+      <div id="nameField" class="field-group">
+        <label for="authName">Full name</label>
+        <input id="authName" name="name" placeholder="Enter your name">
+      </div>
+      <div class="field-group">
+        <label for="authEmail">Email address</label>
+        <input id="authEmail" name="email" type="email" placeholder="you@example.com" required>
+      </div>
+      <div class="field-group">
         <label for="authPassword">Password</label>
-        <input id="authPassword" name="password" type="password" required />
-
-        <button type="submit" class="btn" id="authSubmit">Create account</button>
-
-        <div class="auth-small" id="authToggleText">
-          Already have an account?
-          <button type="button" id="authToggleBtn" class="link">Login</button>
-        </div>
-
-        <div id="authMessage" class="auth-msg" style="display:none"></div>
-        <div id="authError" class="auth-err" style="display:none"></div>
-      </form>
-    </div>
+        <input id="authPassword" name="password" type="password" placeholder="Minimum 6 characters" required>
+      </div>
+      <button type="submit" class="auth-submit" id="authSubmit">Create account <span>→</span></button>
+      <div class="auth-switch" id="authToggleText">Already have an account? <button type="button" id="authToggleBtn">Login</button></div>
+      <div id="authMessage" class="auth-msg" style="display:none"></div>
+      <div id="authError" class="auth-err" style="display:none"></div>
+    </form>
   </div>
+</div>
 
-  <!-- Slider Script -->
-  <script>
-    let index = 0;
-    const slides = document.querySelectorAll('.slide');
-    const dots = document.querySelectorAll('.dot');
+<script>
+(function(){
+  const slides=[...document.querySelectorAll('.hero-slide')];
+  const dots=[...document.querySelectorAll('.slider-dot')];
+  let current=0;
+  let timer;
 
-    function showSlide(n) {
-      slides.forEach((slide, i) => {
-        slide.classList.toggle('active', i === n);
-        dots[i].classList.toggle('active', i === n);
-      });
+  function showSlide(n){
+    current=(n+slides.length)%slides.length;
+    slides.forEach((s,i)=>s.classList.toggle('active',i===current));
+    dots.forEach((d,i)=>d.classList.toggle('active',i===current));
+  }
+  function startSlider(){
+    clearInterval(timer);
+    timer=setInterval(()=>showSlide(current+1),5000);
+  }
+  document.getElementById('nextSlide').addEventListener('click',()=>{showSlide(current+1);startSlider()});
+  document.getElementById('prevSlide').addEventListener('click',()=>{showSlide(current-1);startSlider()});
+  dots.forEach(dot=>dot.addEventListener('click',()=>{showSlide(Number(dot.dataset.slide));startSlider()}));
+  startSlider();
+
+  const AUTH_KEY='ffs_user', TOKEN_KEY='ffs_token', LOGGED_KEY='ffs_logged';
+  const overlay=document.getElementById('authOverlay');
+  const form=document.getElementById('authForm');
+  const title=document.getElementById('authTitle');
+  const lead=document.getElementById('authLead');
+  const nameField=document.getElementById('nameField');
+  const nameInput=document.getElementById('authName');
+  const emailInput=document.getElementById('authEmail');
+  const passwordInput=document.getElementById('authPassword');
+  const submit=document.getElementById('authSubmit');
+  const toggleText=document.getElementById('authToggleText');
+  const message=document.getElementById('authMessage');
+  const error=document.getElementById('authError');
+  let mode='signup';
+
+  function showError(t){error.textContent=t;error.style.display='block';message.style.display='none'}
+  function showMessage(t){message.textContent=t;message.style.display='block';error.style.display='none'}
+  function clearMessages(){message.style.display='none';error.style.display='none'}
+  function setMode(next){
+    mode=next; clearMessages();
+    const signup=mode==='signup';
+    title.textContent=signup?'Create your account':'Welcome back';
+    lead.textContent=signup?'Create an account to explore the complete farming toolkit.':'Enter your email and password to continue.';
+    nameField.style.display=signup?'block':'none';
+    submit.innerHTML=signup?'Create account <span>→</span>':'Login <span>→</span>';
+    toggleText.innerHTML=signup?'Already have an account? <button type="button" id="authToggleBtn">Login</button>':'New to Farmer Friendly? <button type="button" id="authToggleBtn">Create account</button>';
+    document.getElementById('authToggleBtn').onclick=()=>setMode(signup?'login':'signup');
+  }
+  function saveSession(data){
+    localStorage.setItem(TOKEN_KEY,data.token);
+    localStorage.setItem(AUTH_KEY,JSON.stringify(data.user));
+    localStorage.setItem(LOGGED_KEY,data.user.email);
+  }
+  function clearSession(){
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(AUTH_KEY);
+    localStorage.removeItem(LOGGED_KEY);
+  }
+  async function validateSession(){
+    const token=localStorage.getItem(TOKEN_KEY);
+    if(!token){overlay.style.display='flex';setMode('signup');return}
+    try{
+      const response=await fetch('/api/me',{headers:{Authorization:'Bearer '+token}});
+      if(!response.ok) throw new Error();
+      const data=await response.json();
+      localStorage.setItem(AUTH_KEY,JSON.stringify(data.user));
+      localStorage.setItem(LOGGED_KEY,data.user.email);
+    }catch{
+      clearSession();
+      overlay.style.display='flex';
+      setMode('signup');
     }
-
-    function nextSlide() {
-      index = (index + 1) % slides.length;
-      showSlide(index);
-    }
-
-    setInterval(nextSlide, 3000);
-  </script>
-
-  <!-- Auth gating script -->
-  <script>
-    (function(){
-      const AUTH_KEY="ffs_user", TOKEN_KEY="ffs_token", LOGGED_KEY="ffs_logged";
-      const overlay=document.getElementById("authOverlay");
-      const form=document.getElementById("authForm");
-      const title=document.getElementById("authTitle");
-      const lead=document.getElementById("authLead");
-      const nameField=document.getElementById("nameField");
-      const nameInput=document.getElementById("authName");
-      const emailInput=document.getElementById("authEmail");
-      const passwordInput=document.getElementById("authPassword");
-      const submit=document.getElementById("authSubmit");
-      const toggleText=document.getElementById("authToggleText");
-      const message=document.getElementById("authMessage");
-      const error=document.getElementById("authError");
-      let mode="signup";
-
-      function showError(t){error.textContent=t;error.style.display="block";message.style.display="none"}
-      function showMessage(t){message.textContent=t;message.style.display="block";error.style.display="none"}
-      function clearMessages(){message.style.display="none";error.style.display="none"}
-
-      function setMode(next){
-        mode=next; clearMessages();
-        const signup=mode==="signup";
-        title.textContent=signup?"Sign up":"Login";
-        lead.textContent=signup?"Create your account to continue.":"Enter your email and password to continue.";
-        nameField.style.display=signup?"block":"none";
-        submit.textContent=signup?"Create account":"Login";
-        toggleText.innerHTML=signup
-          ? 'Already have an account? <button type="button" id="authToggleBtn" class="link">Login</button>'
-          : 'New user? <button type="button" id="authToggleBtn" class="link">Sign up</button>';
-        document.getElementById("authToggleBtn").onclick=()=>setMode(signup?"login":"signup");
-      }
-
-      function saveSession(data){
-        localStorage.setItem(TOKEN_KEY,data.token);
-        localStorage.setItem(AUTH_KEY,JSON.stringify(data.user));
-        localStorage.setItem(LOGGED_KEY,data.user.email);
-      }
-      function clearSession(){
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(AUTH_KEY);
-        localStorage.removeItem(LOGGED_KEY);
-      }
-
-      async function validateSession(){
-        const token=localStorage.getItem(TOKEN_KEY);
-        if(!token){overlay.style.display="flex";setMode("signup");return}
-        try{
-          const response=await fetch("/api/me",{headers:{Authorization:"Bearer "+token}});
-          if(!response.ok) throw new Error();
-          const data=await response.json();
-          localStorage.setItem(AUTH_KEY,JSON.stringify(data.user));
-          localStorage.setItem(LOGGED_KEY,data.user.email);
-          overlay.style.display="none";
-        }catch{
-          clearSession();
-          overlay.style.display="flex";
-          setMode("signup");
-        }
-      }
-
-      form.addEventListener("submit",async function(e){
-        e.preventDefault(); clearMessages();
-        const name=nameInput.value.trim();
-        const email=emailInput.value.trim().toLowerCase();
-        const password=passwordInput.value;
-        if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showError("Enter a valid email.");return}
-        if(password.length<6){showError("Password must be at least 6 characters.");return}
-        if(mode==="signup"&&!name){showError("Enter your name.");return}
-        submit.disabled=true;
-        try{
-          const response=await fetch("/api/"+mode,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(mode==="signup"?{name,email,password}:{email,password})});
-          const data=await response.json();
-          if(!response.ok) throw new Error(data.error||"Request failed.");
-          saveSession(data);
-          showMessage(mode==="signup"?"Account created successfully.":"Login successful.");
-          setTimeout(()=>overlay.style.display="none",400);
-        }catch(err){showError(err.message)}
-        finally{submit.disabled=false}
-      });
-
-      validateSession();
-    })();
-  </script>
+  }
+  form.addEventListener('submit',async e=>{
+    e.preventDefault(); clearMessages();
+    const name=nameInput.value.trim();
+    const email=emailInput.value.trim().toLowerCase();
+    const password=passwordInput.value;
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showError('Enter a valid email.');return}
+    if(password.length<6){showError('Password must be at least 6 characters.');return}
+    if(mode==='signup'&&!name){showError('Enter your name.');return}
+    submit.disabled=true;
+    try{
+      const response=await fetch('/api/'+mode,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(mode==='signup'?{name,email,password}:{email,password})});
+      const data=await response.json();
+      if(!response.ok) throw new Error(data.error||'Request failed.');
+      saveSession(data);
+      showMessage(mode==='signup'?'Account created successfully.':'Login successful.');
+      setTimeout(()=>overlay.style.display='none',350);
+    }catch(err){showError(err.message)}
+    finally{submit.disabled=false}
+  });
+  validateSession();
+})();
+</script>
 </body>
 </html>
