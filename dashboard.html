@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Farmer Dashboard | Farmer Friendly</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+body{padding-top:86px}.dash{padding:55px 0 80px}.dash-head{display:flex;justify-content:space-between;align-items:end;gap:20px;margin-bottom:30px}.kicker{font-size:11px;letter-spacing:.16em;font-weight:900;color:var(--green)}h1{font:800 clamp(36px,5vw,58px)/1.05 Manrope,sans-serif;letter-spacing:-.05em;margin-top:8px}h1 span{color:var(--green)}.muted{color:var(--muted);max-width:600px}.welcome{background:var(--green-dark);color:#fff;border-radius:24px;padding:28px 30px;min-width:250px}.welcome small{color:var(--lime);text-transform:uppercase;letter-spacing:.12em}.welcome strong{display:block;font:800 24px Manrope;margin-top:5px}.dash-grid{display:grid;grid-template-columns:1.35fr .65fr;gap:20px}.panel{background:#fff;border:1px solid var(--line);border-radius:22px;padding:26px;box-shadow:0 8px 30px rgba(8,48,36,.045)}.panel h2{font:800 24px Manrope;letter-spacing:-.03em;margin-bottom:8px}.panel p{font-size:13px;color:var(--muted)}.action-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:22px}.action{padding:18px;border-radius:16px;background:var(--green-soft);border:1px solid transparent;transition:.25s}.action:hover{transform:translateY(-3px);border-color:#b9d8c8}.action b{display:block;font:800 16px Manrope;margin-top:8px}.action span{font-size:24px}.stat-list{display:grid;gap:12px;margin-top:18px}.stat{display:flex;justify-content:space-between;padding:15px;border-radius:14px;background:#f6f8f5}.stat span{color:var(--muted);font-size:12px}.stat strong{font:800 14px Manrope}.tip{margin-top:18px;padding:18px;border-left:3px solid var(--lime);background:#f7f9ef;border-radius:12px;font-size:13px}.logout{border:0;background:none;color:#fff;text-decoration:underline;cursor:pointer;margin-top:12px;font-size:12px}@media(max-width:800px){.dash-head,.dash-grid{display:block}.welcome{margin-top:20px}.action-grid{grid-template-columns:1fr}.panel{margin-bottom:18px}}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="header-inner"><a class="brand" href="index.html"><span class="brand-mark">🌱</span><span><strong>Farmer</strong> Friendly</span></a><nav class="main-nav"><a href="index.html">Home</a><a href="crop-recommendation.html">Smart Crop</a><a href="weather.html">Weather</a><a href="purchase.html">Marketplace</a></nav></div></header>
+<main class="dash"><div class="container">
+<div class="dash-head"><div><div class="kicker">FARMER DASHBOARD</div><h1>Welcome to your<br><span>smart farm workspace.</span></h1><p class="muted">Use one dashboard to plan crops, check conditions and access the next generation of Farmer Friendly tools.</p></div><div class="welcome"><small>Signed in as</small><strong id="userName">Farmer</strong><button class="logout" id="logout">Log out</button></div></div>
+<div class="dash-grid">
+<section class="panel"><h2>Quick actions</h2><p>Start with the tools you need most.</p><div class="action-grid">
+<a class="action" href="crop-recommendation.html"><span>🌾</span><b>Smart Crop Recommendation</b><p>Match season, soil and water with suitable crops.</p></a>
+<a class="action" href="weather.html"><span>🌦️</span><b>Live Weather</b><p>Check current conditions before planning field work.</p></a>
+<a class="action" href="soil.html"><span>🌱</span><b>Soil Insights</b><p>Explore soil types and crop compatibility.</p></a>
+<a class="action" href="crop-guide.html"><span>📖</span><b>Crop Guide</b><p>Review crop duration, season and growing information.</p></a>
+</div></section>
+<aside class="panel"><h2>Your workspace</h2><p>Personal features will be connected here as we build V3.</p><div class="stat-list"><div class="stat"><span>Saved crops</span><strong>Coming next</strong></div><div class="stat"><span>Farm planner</span><strong>Coming next</strong></div><div class="stat"><span>Orders</span><strong>Coming next</strong></div></div><div class="tip">🌿 <strong>Next step:</strong> use Smart Crop Recommendation to generate your first crop shortlist.</div></aside>
+</div></div></main>
+<script>
+(async()=>{const token=localStorage.getItem("ffs_token");if(!token){location.href="index.html";return}try{const r=await fetch("/api/me",{headers:{Authorization:"Bearer "+token}});if(!r.ok)throw 0;const d=await r.json();document.getElementById("userName").textContent=d.user.name}catch{localStorage.clear();location.href="index.html"}})();
+document.getElementById("logout").onclick=()=>{localStorage.removeItem("ffs_token");localStorage.removeItem("ffs_user");localStorage.removeItem("ffs_logged");location.href="index.html"};
+</script>
+</body></html>
