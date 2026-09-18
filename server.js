@@ -303,7 +303,18 @@ app.post("/api/orders",requireAuth,async(req,res)=>{
   }catch(error){await client.query("ROLLBACK");console.error(error);res.status(error.status||500).json({error:error.message||"Unable to place order."});}
   finally{client.release();}
 });
-
 app.get("/api/orders",requireAuth,async(req,res)=>{
   const {rows}=await pool.query(`SELECT o.id,o.total_amount,o.status,o.created_at,
     COALESCE(json_agg(json_build_object('productId',p.id,'name',p.name,'quantity',oi.quantity,'price',p.price) ORDER BY p.name) FILTER (WHERE p.id IS NOT NULL),'[]') AS items
+    FROM orders o LEFT JOIN order_items oi ON oi.order_id=o.id LEFT JOIN products p ON p.id=oi.product_id
+    WHERE o.user_id=$1 GROUP BY o.id ORDER BY o.created_at DESC`,[req.auth.id]);
+  res.json({orders:rows});
+});
+app.post("/api/contact",requireAuth,async(req,res)=>{
+  const message=String(req.body?.message||"").trim();if(!message)return res.status(400).json({error:"Message is required."});
+  await pool.query("INSERT INTO contacts (user_id,message) VALUES ($1,$2)",[req.auth.id,message]);res.status(201).json({message:"Message received."});
+});
+app.get("*",(_req,res)=>res.sendFile(path.join(__dirname,"index.html")));
+async function start(){await initDatabase();app.listen(PORT,()=>console.log("Server running on port "+PORT));}
+start().catch(error=>{console.error("Startup failed:",error);process.exit(1);});
+process.on("SIGTERM",async()=>{await pool.end();process.exit(0);});
