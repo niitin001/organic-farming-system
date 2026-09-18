@@ -111,6 +111,11 @@ async function initDatabase() {
     );
   `);
 
+  await pool.query(\`
+    DELETE FROM crops a USING crops b WHERE a.name = b.name AND a.id > b.id;
+    CREATE UNIQUE INDEX IF NOT EXISTS crops_name_unique ON crops(name);
+  \`);
+
   for (const crop of cropProfiles) {
     await pool.query(
       `INSERT INTO crops (name,season,soil_type,duration,water_requirement,description)
