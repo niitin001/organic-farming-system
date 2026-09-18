@@ -63,6 +63,15 @@ async function initDatabase() {
   `);
   await pool.query("DELETE FROM crops a USING crops b WHERE a.name = b.name AND a.id > b.id");
   await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS crops_name_unique ON crops(name)");
+  await pool.query("DELETE FROM products a USING products b WHERE a.name = b.name AND a.id > b.id");
+  await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS products_name_unique ON products(name)");
+  for (const product of marketplaceProducts) {
+    await pool.query(
+      `INSERT INTO products (name,category,price,stock,image) VALUES ($1,$2,$3,$4,$5)
+       ON CONFLICT (name) DO UPDATE SET category=EXCLUDED.category,price=EXCLUDED.price,stock=EXCLUDED.stock,image=EXCLUDED.image`,
+      [product.name,product.category,product.price,product.stock,product.image]
+    );
+  }
   for (const crop of cropProfiles) {
     await pool.query(
       `INSERT INTO crops (name,season,soil_type,duration,water_requirement,description)
@@ -164,6 +173,60 @@ app.get("/api/disease-guide",async(req,res)=>{
   let guides=diseaseGuides.filter(g=>!crop||g.crop.toLowerCase().includes(crop)||crop.includes(g.crop.split(" ")[0].toLowerCase()));
   if(symptom) guides=guides.filter(g=>g.symptoms.some(s=>s.toLowerCase().includes(symptom))||g.issue.toLowerCase().includes(symptom)||g.cause.toLowerCase().includes(symptom));
   res.json({guides});
+});
+
+
+const marketplaceProducts = [
+  {name:"Organic Rice Seeds",category:"Seeds",price:299,stock:40,image:"https://images.unsplash.com/photo-1536633052449-94d8b4b2a8d0?auto=format&fit=crop&w=900&q=80"},
+  {name:"Soybean Seeds",category:"Seeds",price:349,stock:35,image:"https://images.unsplash.com/photo-1582515073490-dc9c1c3d2b1c?auto=format&fit=crop&w=900&q=80"},
+  {name:"Organic Vegetable Seed Kit",category:"Seeds",price:249,stock:50,image:"https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=900&q=80"},
+  {name:"Vermicompost 25 kg",category:"Fertilizers",price:499,stock:25,image:"https://images.unsplash.com/photo-1589923188900-85dae523342b?auto=format&fit=crop&w=900&q=80"},
+  {name:"Neem Cake Organic Fertilizer",category:"Fertilizers",price:399,stock:30,image:"https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&w=900&q=80"},
+  {name:"Neem Based Bio-Pesticide",category:"Bio-Pesticides",price:449,stock:20,image:"https://images.unsplash.com/photo-1492496913980-501348b61469?auto=format&fit=crop&w=900&q=80"},
+  {name:"Manual Hand Weeder",category:"Farm Tools",price:699,stock:15,image:"https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=900&q=80"}
+];
+
+app.get("/api/products",async(req,res)=>{
+  const category=String(req.query.category||"").trim();
+  const q=String(req.query.q||"").trim();
+  const params=[]; const where=[];
+  if(category){params.push(category);where.push(`category=${params.length}`);}
+  if(q){params.push(`%${q}%`);where.push(`(name ILIKE ${params.length} OR category ILIKE ${params.length})`);}
+  const sql="SELECT id,name,category,price,stock,image FROM products "+(where.length?"WHERE "+where.join(" AND "):"")+" ORDER BY id";
+  const {rows}=await pool.query(sql,params); res.json({products:rows});
+});
+
+app.post("/api/orders",requireAuth,async(req,res)=>{
+  const items=Array.isArray(req.body?.items)?req.body.items:[];
+  const clean=items.map(i=>({productId:Number(i.productId),quantity:Number(i.quantity)})).filter(i=>Number.isInteger(i.productId)&&Number.isInteger(i.quantity)&&i.quantity>0);
+  if(!clean.length)return res.status(400).json({error:"Cart is empty."});
+  const client=await pool.connect();
+  try{
+    await client.query("BEGIN");
+    let total=0; const verified=[];
+    for(const item of clean){
+      const {rows}=await client.query("SELECT id,name,price,stock FROM products WHERE id=$1 FOR UPDATE",[item.productId]);
+      if(!rows[0])throw Object.assign(new Error("Product not found."),{status:404});
+      if(rows[0].stock<item.quantity)throw Object.assign(new Error(`Not enough stock for ${rows[0].name}.`),{status:409});
+      total+=Number(rows[0].price)*item.quantity; verified.push({...item,price:Number(rows[0].price)});
+    }
+    const order=await client.query("INSERT INTO orders (user_id,total_amount,status) VALUES ($1,$2,'pending') RETURNING id,total_amount,status,created_at",[req.auth.id,total]);
+    for(const item of verified){
+      await client.query("INSERT INTO order_items (order_id,product_id,quantity) VALUES ($1,$2,$3)",[order.rows[0].id,item.productId,item.quantity]);
+      await client.query("UPDATE products SET stock=stock-$1 WHERE id=$2",[item.quantity,item.productId]);
+    }
+    await client.query("COMMIT");
+    res.status(201).json({order:order.rows[0]});
+  }catch(error){await client.query("ROLLBACK");console.error(error);res.status(error.status||500).json({error:error.message||"Unable to place order."});}
+  finally{client.release();}
+});
+
+app.get("/api/orders",requireAuth,async(req,res)=>{
+  const {rows}=await pool.query(`SELECT o.id,o.total_amount,o.status,o.created_at,
+    COALESCE(json_agg(json_build_object('productId',p.id,'name',p.name,'quantity',oi.quantity,'price',p.price) ORDER BY p.name) FILTER (WHERE p.id IS NOT NULL),'[]') AS items
+    FROM orders o LEFT JOIN order_items oi ON oi.order_id=o.id LEFT JOIN products p ON p.id=oi.product_id
+    WHERE o.user_id=$1 GROUP BY o.id ORDER BY o.created_at DESC`,[req.auth.id]);
+  res.json({orders:rows});
 });
 
 app.post("/api/contact",requireAuth,async(req,res)=>{
