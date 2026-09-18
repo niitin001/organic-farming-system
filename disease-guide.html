@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Disease & Pest Guide | Farmer Friendly</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+.guide-wrap{max-width:1120px;margin:110px auto 60px;padding:0 22px}.guide-hero{background:linear-gradient(135deg,#0f3d2e,#2f7d32);color:#fff;border-radius:28px;padding:42px 34px;margin-bottom:24px}.guide-hero h1{font-size:clamp(2rem,5vw,3.4rem);margin:8px 0}.guide-hero p{max-width:720px;opacity:.9}.guide-form{background:#fff;border:1px solid #e5ece7;border-radius:22px;padding:22px;display:grid;grid-template-columns:1fr 1fr auto;gap:14px;box-shadow:0 12px 35px rgba(0,0,0,.06)}.guide-form label{font-weight:700;font-size:.9rem}.guide-form select,.guide-form input{width:100%;margin-top:7px;padding:13px;border:1px solid #d7e2da;border-radius:12px;background:#fff}.guide-form button{align-self:end;padding:13px 22px;border:0;border-radius:12px;background:#214f32;color:#fff;font-weight:800;cursor:pointer}.results{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-top:22px}.guide-card{background:#fff;border:1px solid #e5ece7;border-radius:20px;padding:24px;box-shadow:0 10px 28px rgba(0,0,0,.05)}.badge{display:inline-block;background:#edf7ef;color:#246b35;padding:6px 10px;border-radius:999px;font-size:.78rem;font-weight:800}.guide-card h2{margin:12px 0 6px}.guide-card h3{font-size:.95rem;margin:18px 0 8px}.guide-card ul{padding-left:20px;line-height:1.7}.warning{background:#fff7df;border-radius:12px;padding:12px;margin-top:16px;font-size:.9rem}.empty{text-align:center;padding:35px;background:#f7faf8;border-radius:18px;grid-column:1/-1}.back{display:inline-block;margin-bottom:18px;color:#fff;text-decoration:none;font-weight:700}@media(max-width:760px){.guide-form,.results{grid-template-columns:1fr}.guide-wrap{margin-top:92px}.guide-hero{padding:30px 22px}}
+</style>
+</head>
+<body>
+<nav class="navbar"><a href="index.html" class="brand">🌱 Farmer Friendly</a><div class="nav-links"><a href="dashboard.html">Dashboard</a><a href="crop-recommendation.html">Smart Crop</a><a href="weather.html">Weather</a></div></nav>
+<main class="guide-wrap">
+<section class="guide-hero"><a class="back" href="dashboard.html">← Back to Dashboard</a><span class="badge">SMART FARM • CROP HEALTH</span><h1>Disease & Pest Guide</h1><p>Select a crop to see common symptoms, possible issues, prevention and general organic-management ideas. This is a screening guide, not a confirmed diagnosis.</p></section>
+<section class="guide-form">
+<label>Crop<select id="crop"><option value="">All crops</option><option>Rice</option><option>Wheat</option><option>Soybean</option><option>Groundnut</option><option>Mustard</option><option>Vegetables</option><option>Tomato</option></select></label>
+<label>Symptom / issue<input id="symptom" placeholder="e.g. yellow leaves, aphids"></label>
+<button id="searchBtn">Find Guide</button>
+</section>
+section id="results" class="results"></section>
+</main>
+<script>
+const results=document.getElementById("results");
+function esc(v){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));}
+async function loadGuides(){
+  results.innerHTML="<div class='empty'>Checking the guide…</div>";
+  const crop=document.getElementById("crop").value, symptom=document.getElementById("symptom").value.trim();
+  const r=await fetch("/api/disease-guide?crop="+encodeURIComponent(crop)+"&symptom="+encodeURIComponent(symptom));
+  const data=await r.json();
+  if(!r.ok) {results.innerHTML="<div class='empty'>Unable to load the guide.</div>";return;}
+  if(!data.guides.length){results.innerHTML="<div class='empty'>No matching guide found. Try another crop or symptom.</div>";return;}
+  results.innerHTML=data.guides.map(g=>"<article class='guide-card'><span class='badge'>"+esc(g.crop)+"</span><h2>"+esc(g.issue)+"</h2><p><strong>Possible cause:</strong> "+esc(g.cause)+"</p><h3>🔎 Common symptoms</h3><ul>"+g.symptoms.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul><h3>🛡️ Prevention</h3><ul>"+g.prevention.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul><h3>🌿 General organic options</h3><ul>"+g.organic.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul><div class='warning'><strong>⚠️ Important:</strong> "+esc(g.dont)+"</div></article>").join("");
+}
+document.getElementById("searchBtn").addEventListener("click",loadGuides);loadGuides();
+</script>
+</body></html>
