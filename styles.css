@@ -59,3 +59,7 @@ button,input{font:inherit}
   .intro-section{padding:75px 0}.intro-grid{grid-template-columns:1fr;gap:25px}.section-heading{display:block}.section-heading p{margin-top:16px}.tool-grid{grid-template-columns:1fr}.tool-card{min-height:245px}.season-inner{display:block}.season-inner .btn{margin-top:28px}.cta-card{padding:34px 25px;display:block}.cta-card h2{font-size:36px}.cta-actions{margin-top:25px}.footer-grid{grid-template-columns:1fr 1fr;gap:30px}.footer-bottom{display:block}.footer-bottom span{display:block;margin-top:7px}
 }
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.hero-slide,.tool-card,.btn{transition:none}}
+
+.lang-switch{display:flex;gap:5px;margin-left:8px;padding:4px;border:1px solid rgba(255,255,255,.2);border-radius:10px;background:rgba(255,255,255,.06)}
+.lang-switch button{border:0;background:transparent;color:#fff;padding:5px 8px;border-radius:7px;font-size:10px;font-weight:900;cursor:pointer}.lang-switch button.active{background:var(--lime);color:var(--green-dark)}
+@media(max-width:800px){.lang-switch{margin-left:0}.main-nav{overflow-x:auto}}
