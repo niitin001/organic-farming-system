@@ -146,6 +146,31 @@ app.get("/api/me", requireAuth, async (req, res) => {
   res.json({ user: rows[0] });
 });
 
+app.get("/api/crop-recommendations", (req, res) => {
+  const season = String(req.query.season || "").trim().toLowerCase();
+  const soil = String(req.query.soil || "").trim().toLowerCase();
+  const water = String(req.query.water || "").trim().toLowerCase();
+  const crops = [
+    {name:"Rice",icon:"🌾",seasons:["kharif"],soils:["clay","loamy"],water:"high",duration:"120–150 days",reason:"Best fit for Kharif conditions with reliable water and clay/loamy soil."},
+    {name:"Soybean",icon:"🫘",seasons:["kharif"],soils:["loamy","black"],water:"medium",duration:"90–110 days",reason:"Suitable for Kharif and commonly grown on well-drained loamy or black soil."},
+    {name:"Maize",icon:"🌽",seasons:["kharif","rabi","zaid"],soils:["loamy","black"],water:"medium",duration:"80–120 days",reason:"Flexible season crop with moderate water needs and good performance in loamy/black soil."},
+    {name:"Wheat",icon:"🌿",seasons:["rabi"],soils:["loamy","clay"],water:"medium",duration:"120–150 days",reason:"A major Rabi crop suited to fertile loamy or clay soil with moderate irrigation."},
+    {name:"Gram (Chickpea)",icon:"🫛",seasons:["rabi"],soils:["loamy","black"],water:"low",duration:"100–120 days",reason:"Works well in Rabi with relatively low water requirement and well-drained soil."},
+    {name:"Mustard",icon:"🌼",seasons:["rabi"],soils:["loamy","sandy"],water:"low",duration:"110–140 days",reason:"A low-water Rabi option for well-drained loamy or sandy soil."},
+    {name:"Groundnut",icon:"🥜",seasons:["kharif","zaid"],soils:["sandy","loamy"],water:"medium",duration:"100–130 days",reason:"Performs well in loose, well-drained sandy or loamy soil."},
+    {name:"Moong Bean",icon:"🌱",seasons:["zaid","kharif"],soils:["sandy","loamy"],water:"low",duration:"60–75 days",reason:"Short-duration crop that fits Zaid conditions and relatively lower water availability."},
+    {name:"Vegetables",icon:"🥬",seasons:["kharif","rabi","zaid"],soils:["loamy"],water:"medium",duration:"45–120 days",reason:"Loamy soil and moderate water support a broad range of seasonal vegetables."}
+  ];
+  const scored=crops.map(c=>{
+    let score=0;
+    if(season && c.seasons.includes(season)) score+=45;
+    if(soil && c.soils.includes(soil)) score+=35;
+    if(water && c.water===water) score+=20;
+    return {...c,score};
+  }).sort((a,b)=>b.score-a.score).slice(0,5);
+  res.json({recommendations:scored,inputs:{season,soil,water}});
+});
+
 app.get("/api/weather", async (req, res) => {
   const city = String(req.query.city || "").trim();
   const key = process.env.WEATHER_API_KEY;
