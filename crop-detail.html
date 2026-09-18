@@ -9,12 +9,14 @@ body{padding-top:86px;background:var(--cream)}.crop-page{padding:55px 0 90px}.ba
 </style>
 </head>
 <body>
-<header class="site-header"><div class="header-inner"><a class="brand" href="index.html"><span class="brand-mark">🌱</span><span><strong>Farmer</strong> Friendly</span></a><nav class="main-nav"><a href="index.html">Home</a><a href="crop-recommendation.html">Smart Crop</a><a href="weather.html">Weather</a><a href="marketplace.html">Marketplace</a></nav></div></header>
+<header class="site-header"><div class="header-inner"><a class="brand" href="index.html"><span class="brand-mark">🌱</span><span><strong>Farmer</strong> Friendly</span></a><nav class="main-nav"><a href="index.html" data-i18n="home">Home</a><a href="crop-recommendation.html">Smart Crop</a><a href="weather.html" data-i18n="weather">Weather</a><a href="marketplace.html" data-i18n="marketplace">Marketplace</a><div class="lang-switch"><button data-lang="en" class="active">EN</button><button data-lang="hi">हि</button></div></nav></div></header>
 <main class="crop-page"><div class="container">
 <div style="display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap"><a class="back" href="crop-recommendation.html">← Back to Smart Crop</a><select id="cropSelect" style="padding:11px 14px;border:1px solid var(--line);border-radius:11px;background:#fff;font-weight:700"><option value="Rice">🌾 Rice</option><option value="Soybean">🫘 Soybean</option><option value="Maize">🌽 Maize</option><option value="Wheat">🌿 Wheat</option><option value="Gram (Chickpea)">🫛 Gram (Chickpea)</option><option value="Mustard">🌼 Mustard</option><option value="Groundnut">🥜 Groundnut</option><option value="Moong Bean">🌱 Moong Bean</option><option value="Vegetables">🥬 Vegetables</option></select></div>
 <div id="app"><div class="card" style="margin-top:20px">Loading crop details…</div></div>
 </div></main>
 <script>
+(function(){const dict={hi:{marketplace:"मार्केटप्लेस",home:"होम",dashboard:"डैशबोर्ड",weather:"मौसम"}};function setLang(l){localStorage.setItem("ffs_lang",l);document.querySelectorAll("[data-i18n]").forEach(e=>{const k=e.dataset.i18n;if(l==="hi"&&dict.hi[k])e.textContent=dict.hi[k];});document.querySelectorAll("[data-lang]").forEach(b=>b.classList.toggle("active",b.dataset.lang===l));}document.querySelectorAll("[data-lang]").forEach(b=>b.onclick=()=>setLang(b.dataset.lang));setLang(localStorage.getItem("ffs_lang")||"en");})();
+</script><script>
 const params=new URLSearchParams(location.search),name=params.get("name")||"Rice";
 const selector=document.getElementById("cropSelect"); selector.value=name; selector.onchange=()=>location.href="crop-detail.html?name="+encodeURIComponent(selector.value);
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",""":"&quot;","'":"&#039;"}[c]));
