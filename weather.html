@@ -135,15 +135,12 @@
         return;
       }
 
-      const apiKey = "8c3634b6dc10170f96b2aea8394a6a2f"; 
-      const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
-
       try {
-        const response = await fetch(url);
+        const response = await fetch("/api/weather?city=" + encodeURIComponent(city));
         const data = await response.json();
 
-        if (data.cod === "404") {
-          resultDiv.innerHTML = "❌ City not found. Try again!";
+        if (!response.ok) {
+          resultDiv.innerHTML = "❌ " + (data.error || "Weather lookup failed.");
           return;
         }
 
