@@ -1,80 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Soil Types - Farmer Friendly</title>
-  <link rel="stylesheet" href="styles.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Soil Health Analyzer | Farmer Friendly</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+.soil-page{min-height:100vh;background:linear-gradient(180deg,#f5fbf6,#eef7ef);padding-bottom:60px}.soil-shell{max-width:1100px;margin:auto;padding:38px 20px}
+.soil-hero{background:linear-gradient(135deg,#173f2d,#3b7d50);color:#fff;border-radius:28px;padding:34px;box-shadow:0 20px 55px rgba(20,70,45,.15)}.soil-hero h1{font-size:clamp(30px,5vw,50px);margin:8px 0}.soil-hero p{max-width:720px;color:#dcefe4}
+.form-panel,.result-panel{background:#fff;border:1px solid #e1ece4;border-radius:24px;padding:24px;margin-top:22px;box-shadow:0 10px 30px rgba(28,70,45,.07)}.form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.field label{display:block;font-weight:700;margin-bottom:7px;color:#274a37}.field input,.field select{width:100%;box-sizing:border-box;padding:13px;border:1px solid #d6e4da;border-radius:12px;font-size:15px}.analyze{margin-top:18px;padding:14px 22px;border:0;border-radius:13px;background:#1f6b45;color:#fff;font-weight:800;cursor:pointer}.result-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.result-card{background:#f4f9f5;border-radius:17px;padding:17px}.result-card h3{margin:0 0 8px}.badge{display:inline-block;padding:6px 10px;border-radius:999px;background:#e0f1e5;color:#276542;font-weight:800}.issues{display:grid;gap:9px}.issues div{padding:12px;background:#fff8e8;border-left:4px solid #d39a35;border-radius:10px}.crop-list{display:flex;flex-wrap:wrap;gap:8px}.crop{background:#e9f5ec;padding:9px 12px;border-radius:999px;font-weight:700}.note{font-size:13px;color:#718077;margin-top:16px}.status{margin-top:15px;font-weight:700;min-height:20px}
+@media(max-width:760px){.form-grid,.result-grid{grid-template-columns:1fr 1fr}}@media(max-width:480px){.form-grid,.result-grid{grid-template-columns:1fr}.soil-hero{padding:25px}}
+</style>
 </head>
 <body>
-
-  <!-- Header -->
-  <header>
-    <div class="header-inner">
-      <div class="logo">Farmer Friendly 🌿</div>
-      <div>
-        <nav style="display:inline-block">
-          <a href="index.html">HOME</a>
-          <a href="about.html">ABOUT</a>
-          <a href="crop-guide.html" class="active">CROP GUIDE</a>
-          <a href="purchase.html">PURCHASE</a>
-          <a href="weather.html">WEATHER</a>
-          <a href="contact.html">CONTACT</a>
-        </nav>
-      </div>
-    </div>
-  </header>
-
-  <!-- Page Title -->
-  <section class="about">
-    <h2>Soil Types and Suitable Crops</h2>
-    <p>
-      India has diverse soil types that support various crops. Understanding soil helps farmers select the right crop for better yield and sustainability.
-    </p>
-  </section>
-
-  <!-- Soil Cards -->
-  <section class="features">
-    <div class="cards">
-      <div class="card">
-        <img src="https://tse3.mm.bing.net/th/id/OIP.fggoVoO8_q9LOi0T2zt7vAHaE8?pid=Api&h=220&P=0" alt="Black Soil">
-        <div class="card-title">Black Soil</div>
-        <p style="padding: 10px;">
-          Rich in clay and moisture-retaining capacity.  
-          <b>Suitable Crops:</b> Cotton, Soybean, and Sunflower.
-        </p>
-      </div>
-
-      <div class="card">
-        <img src="https://tse2.mm.bing.net/th/id/OIP.NKsAyn3TelYBJ_T4mGa5EwHaEK?pid=Api&h=220&P=0" alt="Alluvial Soil">
-        <div class="card-title">Alluvial Soil</div>
-        <p style="padding: 10px;">
-          Found in river plains, rich in nutrients.  
-          <b>Suitable Crops:</b> Rice, Wheat, Sugarcane, and Pulses.
-        </p>
-      </div>
-
-      <div class="card">
-        <img src="https://i.cdn.newsbytesapp.com/images/l49220231218121423.jpeg" alt="Red Soil">
-        <div class="card-title">Red Soil</div>
-        <p style="padding: 10px;">
-          Low in nitrogen but rich in iron.  
-          <b>Suitable Crops:</b> Groundnut, Millets, Potato, and Cotton.
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer class="footer">
-    <p>Email id: abc@vishnu.edu.in</p>
-    <p>Phone: 9876543210</p>
-    <div class="social">
-      <a href="#">f</a>
-      <a href="#">t</a>
-      <a href="#">in</a>
-    </div>
-  </footer>
-
+<div class="soil-page">
+<header><div class="header-inner"><div class="logo">Farmer Friendly 🌿</div><nav style="display:inline-block"><a href="index.html">HOME</a><a href="dashboard.html">DASHBOARD</a><a href="crop-recommendation.html">SMART CROP</a><a href="soil.html" class="active">SOIL</a><a href="weather.html">WEATHER</a></nav></div></header>
+<main class="soil-shell">
+<section class="soil-hero"><div style="font-weight:700;letter-spacing:.08em;text-transform:uppercase">Smart Farm Toolkit</div><h1>Understand your soil before you plant.</h1><p>Enter your soil-test values to get a quick interpretation of pH and major nutrients, plus crop suggestions based on soil type.</p></section>
+<section class="form-panel"><h2>🧪 Soil Test Inputs</h2><div class="form-grid">
+<div class="field"><label for="ph">pH</label><input id="ph" type="number" step="0.1" min="3" max="10" placeholder="e.g. 6.8"></div>
+<div class="field"><label for="n">Nitrogen (N)</label><input id="n" type="number" min="0" placeholder="mg/kg"></div>
+<div class="field"><label for="p">Phosphorus (P)</label><input id="p" type="number" min="0" placeholder="mg/kg"></div>
+<div class="field"><label for="k">Potassium (K)</label><input id="k" type="number" min="0" placeholder="mg/kg"></div>
+<div class="field"><label for="soil">Soil Type</label><select id="soil"><option value="loamy">Loamy</option><option value="black">Black</option><option value="clay">Clay</option><option value="sandy">Sandy</option></select></div>
+</div><button class="analyze" onclick="analyze()">Analyze Soil →</button><div id="status" class="status"></div></section>
+<section id="results" class="result-panel" style="display:none"><h2>📊 Soil Health Summary</h2><div class="result-grid">
+<div class="result-card"><h3>pH Status</h3><span id="phStatus" class="badge"></span></div>
+<div class="result-card"><h3>Nutrient Status</h3><span id="nutStatus" class="badge"></span></div>
+<div class="result-card"><h3>Recommended Crops</h3><div id="crops" class="crop-list"></div></div>
+<div class="result-card"><h3>What to Check</h3><div id="issues" class="issues"></div></div>
+</div><p class="note">These are screening-level suggestions, not a replacement for a laboratory soil test or local agricultural advisory. Amendment rates should be based on your soil-test report.</p></section>
+</main></div>
+<script>
+async function analyze(){
+const body={ph:Number(document.getElementById('ph').value),nitrogen:Number(document.getElementById('n').value),phosphorus:Number(document.getElementById('p').value),potassium:Number(document.getElementById('k').value),soil:document.getElementById('soil').value};
+const status=document.getElementById('status');status.textContent='Analyzing…';
+try{const r=await fetch('/api/soil-analysis',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw new Error(d.error||'Analysis failed.');
+document.getElementById('phStatus').textContent=d.summary.pHStatus;document.getElementById('nutStatus').textContent=d.summary.nutrientStatus;
+document.getElementById('crops').innerHTML=d.crops.map(c=>'<span class="crop">🌱 '+c+'</span>').join('');
+document.getElementById('issues').innerHTML=d.issues.length?d.issues.map(x=>'<div>'+x+'</div>').join(''):'<div>✅ No major screening issue detected from the entered values.</div>';
+document.getElementById('results').style.display='block';status.textContent='Analysis complete.';
+}catch(e){status.textContent='❌ '+e.message;}
+}
+</script>
 </body>
 </html>
