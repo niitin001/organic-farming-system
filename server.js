@@ -60,6 +60,7 @@ async function initDatabase() {
     CREATE TABLE IF NOT EXISTS order_items (id SERIAL PRIMARY KEY,order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,product_id INTEGER NOT NULL REFERENCES products(id),quantity INTEGER NOT NULL CHECK (quantity > 0));
     CREATE TABLE IF NOT EXISTS contacts (id SERIAL PRIMARY KEY,user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,message TEXT NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS saved_crops (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,crop_id INTEGER NOT NULL REFERENCES crops(id) ON DELETE CASCADE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE(user_id,crop_id));
+    CREATE TABLE IF NOT EXISTS farm_tasks (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,crop_name VARCHAR(120) NOT NULL,sowing_date DATE NOT NULL,task_title VARCHAR(180) NOT NULL,task_type VARCHAR(80) NOT NULL,due_date DATE NOT NULL,status VARCHAR(30) NOT NULL DEFAULT 'pending',created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
   `);
   await pool.query("DELETE FROM crops a USING crops b WHERE a.name = b.name AND a.id > b.id");
   await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS crops_name_unique ON crops(name)");
@@ -94,18 +95,6 @@ const farmTimelines = {
   "Moong Bean":[["Seed and field preparation","Preparation",0],["Sowing","Sowing",5],["Plant stand check","Field Work",18],["Weed management","Maintenance",30],["Flowering / pest scouting","Scouting",42],["Pod development check","Maintenance",55],["Harvest readiness check","Harvest",65]],
   "Vegetables":[["Bed and seedling preparation","Preparation",0],["Sowing / transplanting","Sowing",7],["Plant stand check","Field Work",20],["Weed and irrigation check","Maintenance",35],["Nutrition check","Nutrition",50],["Pest & disease scouting","Scouting",70],["Harvest readiness check","Harvest",90]]
 };
-
-  await pool.query(`CREATE TABLE IF NOT EXISTS farm_tasks (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    crop_name VARCHAR(120) NOT NULL,
-    sowing_date DATE NOT NULL,
-    task_title VARCHAR(180) NOT NULL,
-    task_type VARCHAR(80) NOT NULL,
-    due_date DATE NOT NULL,
-    status VARCHAR(30) NOT NULL DEFAULT 'pending',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-  )`);
 
 app.post("/api/farm-plans",requireAuth,async(req,res)=>{
   const cropName=String(req.body?.cropName||"").trim();
@@ -146,6 +135,26 @@ app.delete("/api/farm-tasks/:id",requireAuth,async(req,res)=>{
   if(!Number.isInteger(id))return res.status(400).json({error:"Invalid task id."});
   await pool.query("DELETE FROM farm_tasks WHERE id=$1 AND user_id=$2",[id,req.auth.id]);
   res.json({deleted:true});
+});
+
+app.post("/api/irrigation-calculator",async(req,res)=>{
+  const area=Number(req.body?.area), crop=String(req.body?.crop||"").trim(), soil=String(req.body?.soil||"").trim().toLowerCase(), method=String(req.body?.method||"").trim().toLowerCase();
+  if(!Number.isFinite(area)||area<=0||area>10000)return res.status(400).json({error:"Enter a valid area."});
+  const base={Rice:8,Wheat:5,Soybean:4,Maize:5,Groundnut:4,Mustard:3.5,"Gram (Chickpea)":3,"Moong Bean":3,Vegetables:5}[crop];
+  if(!base)return res.status(400).json({error:"Select a supported crop."});
+  const soilFactor={sandy:1.15,loamy:1,clay:.9,black:.95}[soil]||1;
+  const methodFactor={drip:.75,sprinkler:.85,flood:1}[method]||1;
+  const daily=area*base*soilFactor*methodFactor;
+  res.json({area,crop,soil,method,daily_liters:Math.round(daily),weekly_liters:Math.round(daily*7),note:"Planning estimate only. Actual irrigation depends on crop stage, weather, soil moisture, rainfall and local practice."});
+});
+
+app.post("/api/farm-cost",async(req,res)=>{
+  const area=Number(req.body?.area),seed=Number(req.body?.seed),fertilizer=Number(req.body?.fertilizer),labour=Number(req.body?.labour),irrigation=Number(req.body?.irrigation),other=Number(req.body?.other),revenue=Number(req.body?.revenue);
+  if(!Number.isFinite(area)||area<=0)return res.status(400).json({error:"Enter a valid area."});
+  const values=[seed,fertilizer,labour,irrigation,other,revenue];
+  if(values.some(v=>!Number.isFinite(v)||v<0))return res.status(400).json({error:"Enter valid non-negative cost and revenue values."});
+  const total=seed+fertilizer+labour+irrigation+other,profit=revenue-total,margin=revenue?profit/revenue*100:0;
+  res.json({total_cost:Math.round(total),expected_revenue:Math.round(revenue),estimated_profit:Math.round(profit),margin_percent:Math.round(margin*10)/10,per_acre_cost:Math.round(total/area)});
 });
 
 app.get("/health", async (_req,res) => {
