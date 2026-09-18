@@ -186,6 +186,15 @@ app.get("/api/me",requireAuth,async(req,res)=>{
   if(!rows[0]) return res.status(404).json({error:"User not found."}); res.json({user:rows[0]});
 });
 
+app.get("/api/crops/:name",async(req,res)=>{
+  const name=decodeURIComponent(String(req.params.name||"")).trim();
+  const profile=cropProfiles.find(c=>c.name.toLowerCase()===name.toLowerCase());
+  if(!profile)return res.status(404).json({error:"Crop not found."});
+  const {rows}=await pool.query("SELECT id,name,season,soil_type,duration,water_requirement,description FROM crops WHERE name=$1",[profile.name]);
+  if(!rows[0])return res.status(404).json({error:"Crop not found."});
+  res.json({crop:{...rows[0],icon:profile.icon,seasons:profile.seasons,soils:profile.soils,water:profile.water,reason:profile.reason}});
+});
+
 app.get("/api/crop-recommendations",async(req,res)=>{
   const season=String(req.query.season||"").trim().toLowerCase(),soil=String(req.query.soil||"").trim().toLowerCase(),water=String(req.query.water||"").trim().toLowerCase();
   const scored=cropProfiles.map(c=>{let score=0;if(season&&c.seasons.includes(season))score+=45;if(soil&&c.soils.includes(soil))score+=35;if(water&&c.water===water)score+=20;return {...c,score};}).sort((a,b)=>b.score-a.score).slice(0,5);
@@ -298,17 +307,3 @@ app.post("/api/orders",requireAuth,async(req,res)=>{
 app.get("/api/orders",requireAuth,async(req,res)=>{
   const {rows}=await pool.query(`SELECT o.id,o.total_amount,o.status,o.created_at,
     COALESCE(json_agg(json_build_object('productId',p.id,'name',p.name,'quantity',oi.quantity,'price',p.price) ORDER BY p.name) FILTER (WHERE p.id IS NOT NULL),'[]') AS items
-    FROM orders o LEFT JOIN order_items oi ON oi.order_id=o.id LEFT JOIN products p ON p.id=oi.product_id
-    WHERE o.user_id=$1 GROUP BY o.id ORDER BY o.created_at DESC`,[req.auth.id]);
-  res.json({orders:rows});
-});
-
-app.post("/api/contact",requireAuth,async(req,res)=>{
-  const message=String(req.body?.message||"").trim();if(!message)return res.status(400).json({error:"Message is required."});
-  await pool.query("INSERT INTO contacts (user_id,message) VALUES ($1,$2)",[req.auth.id,message]);res.status(201).json({message:"Message received."});
-});
-
-app.get("*",(_req,res)=>res.sendFile(path.join(__dirname,"index.html")));
-async function start(){await initDatabase();app.listen(PORT,()=>console.log(`Server running on port ${PORT}`));}
-start().catch(error=>{console.error("Startup failed:",error);process.exit(1);});
-process.on("SIGTERM",async()=>{await pool.end();process.exit(0);});
