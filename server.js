@@ -83,6 +83,71 @@ async function initDatabase() {
   }
 }
 
+const farmTimelines = {
+  "Rice":[["Land & seed preparation","Preparation",0],["Nursery / sowing check","Sowing",7],["Transplanting / establishment","Field Work",25],["Weed and water management","Maintenance",45],["Nutrient management check","Nutrition",60],["Pest & disease scouting","Scouting",75],["Harvest readiness check","Harvest",115]],
+  "Wheat":[["Seed and field preparation","Preparation",0],["Sowing","Sowing",7],["First irrigation check","Irrigation",25],["Weed and crop scouting","Maintenance",45],["Nutrient management check","Nutrition",65],["Disease scouting","Scouting",90],["Harvest readiness check","Harvest",120]],
+  "Soybean":[["Seed and field preparation","Preparation",0],["Sowing","Sowing",5],["Plant stand check","Field Work",20],["Weed management","Maintenance",30],["Nutrient / moisture check","Maintenance",50],["Pest & disease scouting","Scouting",70],["Harvest readiness check","Harvest",95]],
+  "Maize":[["Field and seed preparation","Preparation",0],["Sowing","Sowing",5],["Plant stand check","Field Work",20],["Weed management","Maintenance",30],["Nutrient management check","Nutrition",45],["Pest scouting","Scouting",65],["Harvest readiness check","Harvest",90]],
+  "Gram (Chickpea)":[["Seed and field preparation","Preparation",0],["Sowing","Sowing",5],["Germination / stand check","Field Work",20],["Weed management","Maintenance",35],["Flowering stage scouting","Scouting",60],["Pod development check","Maintenance",80],["Harvest readiness check","Harvest",105]],
+  "Mustard":[["Field and seed preparation","Preparation",0],["Sowing","Sowing",5],["Plant stand check","Field Work",20],["Weed management","Maintenance",35],["Aphid / disease scouting","Scouting",55],["Pod development check","Maintenance",85],["Harvest readiness check","Harvest",115]],
+  "Groundnut":[["Seed and field preparation","Preparation",0],["Sowing","Sowing",5],["Plant stand check","Field Work",20],["Weed management","Maintenance",35],["Pegging stage field check","Field Work",50],["Pest & disease scouting","Scouting",80],["Harvest readiness check","Harvest",105]],
+  "Moong Bean":[["Seed and field preparation","Preparation",0],["Sowing","Sowing",5],["Plant stand check","Field Work",18],["Weed management","Maintenance",30],["Flowering / pest scouting","Scouting",42],["Pod development check","Maintenance",55],["Harvest readiness check","Harvest",65]],
+  "Vegetables":[["Bed and seedling preparation","Preparation",0],["Sowing / transplanting","Sowing",7],["Plant stand check","Field Work",20],["Weed and irrigation check","Maintenance",35],["Nutrition check","Nutrition",50],["Pest & disease scouting","Scouting",70],["Harvest readiness check","Harvest",90]]
+};
+
+  await pool.query(`CREATE TABLE IF NOT EXISTS farm_tasks (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    crop_name VARCHAR(120) NOT NULL,
+    sowing_date DATE NOT NULL,
+    task_title VARCHAR(180) NOT NULL,
+    task_type VARCHAR(80) NOT NULL,
+    due_date DATE NOT NULL,
+    status VARCHAR(30) NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`);
+
+app.post("/api/farm-plans",requireAuth,async(req,res)=>{
+  const cropName=String(req.body?.cropName||"").trim();
+  const sowingDate=String(req.body?.sowingDate||"").trim();
+  const timeline=farmTimelines[cropName];
+  if(!timeline)return res.status(400).json({error:"Select a supported crop."});
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(sowingDate))return res.status(400).json({error:"Enter a valid sowing date."});
+  const start=new Date(sowingDate+"T00:00:00Z");
+  if(Number.isNaN(start.getTime()))return res.status(400).json({error:"Enter a valid sowing date."});
+  await pool.query("DELETE FROM farm_tasks WHERE user_id=$1 AND crop_name=$2 AND sowing_date=$3",[req.auth.id,cropName,sowingDate]);
+  const values=[];
+  for(const [title,type,offset] of timeline){
+    const due=new Date(start); due.setUTCDate(due.getUTCDate()+offset);
+    values.push([req.auth.id,cropName,sowingDate,title,type,due.toISOString().slice(0,10)]);
+  }
+  for(const v of values)await pool.query("INSERT INTO farm_tasks (user_id,crop_name,sowing_date,task_title,task_type,due_date) VALUES ($1,$2,$3,$4,$5,$6)",v);
+  const {rows}=await pool.query("SELECT * FROM farm_tasks WHERE user_id=$1 AND crop_name=$2 AND sowing_date=$3 ORDER BY due_date,id",[req.auth.id,cropName,sowingDate]);
+  res.status(201).json({tasks:rows});
+});
+
+app.get("/api/farm-tasks",requireAuth,async(req,res)=>{
+  const {rows}=await pool.query("SELECT * FROM farm_tasks WHERE user_id=$1 ORDER BY due_date,id",[req.auth.id]);
+  res.json({tasks:rows});
+});
+
+app.patch("/api/farm-tasks/:id",requireAuth,async(req,res)=>{
+  const id=Number(req.params.id);
+  if(!Number.isInteger(id))return res.status(400).json({error:"Invalid task id."});
+  const status=String(req.body?.status||"").toLowerCase();
+  if(!["pending","completed"].includes(status))return res.status(400).json({error:"Invalid task status."});
+  const {rows}=await pool.query("UPDATE farm_tasks SET status=$1 WHERE id=$2 AND user_id=$3 RETURNING *",[status,id,req.auth.id]);
+  if(!rows[0])return res.status(404).json({error:"Task not found."});
+  res.json({task:rows[0]});
+});
+
+app.delete("/api/farm-tasks/:id",requireAuth,async(req,res)=>{
+  const id=Number(req.params.id);
+  if(!Number.isInteger(id))return res.status(400).json({error:"Invalid task id."});
+  await pool.query("DELETE FROM farm_tasks WHERE id=$1 AND user_id=$2",[id,req.auth.id]);
+  res.json({deleted:true});
+});
+
 app.get("/health", async (_req,res) => {
   try { await pool.query("SELECT 1"); res.json({status:"ok",database:"connected"}); }
   catch { res.status(503).json({status:"error",database:"unavailable"}); }
