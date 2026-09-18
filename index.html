@@ -331,142 +331,88 @@
   <!-- Auth gating script -->
   <script>
     (function(){
-      const AUTH_KEY = 'ffs_user';
-      const LOGGED_KEY = 'ffs_logged';
+      const AUTH_KEY="ffs_user", TOKEN_KEY="ffs_token", LOGGED_KEY="ffs_logged";
+      const overlay=document.getElementById("authOverlay");
+      const form=document.getElementById("authForm");
+      const title=document.getElementById("authTitle");
+      const lead=document.getElementById("authLead");
+      const nameField=document.getElementById("nameField");
+      const nameInput=document.getElementById("authName");
+      const emailInput=document.getElementById("authEmail");
+      const passwordInput=document.getElementById("authPassword");
+      const submit=document.getElementById("authSubmit");
+      const toggleText=document.getElementById("authToggleText");
+      const message=document.getElementById("authMessage");
+      const error=document.getElementById("authError");
+      let mode="signup";
 
-      const overlay = document.getElementById('authOverlay');
-      const authForm = document.getElementById('authForm');
-      const authTitle = document.getElementById('authTitle');
-      const authLead = document.getElementById('authLead');
-      const nameField = document.getElementById('nameField');
-      const authName = document.getElementById('authName');
-      const authEmail = document.getElementById('authEmail');
-      const authPassword = document.getElementById('authPassword');
-      const authSubmit = document.getElementById('authSubmit');
-      const authToggleBtn = document.getElementById('authToggleBtn');
-      const authToggleText = document.getElementById('authToggleText');
-      const authMessage = document.getElementById('authMessage');
-      const authError = document.getElementById('authError');
-      const logoutBtn = document.getElementById('logoutBtn');
-      function getUser(){
-        try{ return JSON.parse(localStorage.getItem(AUTH_KEY)); } catch(e){ return null; }
-      }    
-      function setUser(u){ localStorage.setItem(AUTH_KEY, JSON.stringify(u)); }
-      function setLogged(email){ localStorage.setItem(LOGGED_KEY, email); }
-      function clearLogged(){ localStorage.removeItem(LOGGED_KEY); }
-      function getLogged(){ return localStorage.getItem(LOGGED_KEY); }
+      function showError(t){error.textContent=t;error.style.display="block";message.style.display="none"}
+      function showMessage(t){message.textContent=t;message.style.display="block";error.style.display="none"}
+      function clearMessages(){message.style.display="none";error.style.display="none"}
 
-      function showMsg(txt){ authMessage.style.display='block'; authMessage.textContent = txt; authError.style.display='none'; }
-      function showErr(txt){ authError.style.display='block'; authError.textContent = txt; authMessage.style.display='none'; }
-      function clearMsgs(){ authError.style.display='none'; authMessage.style.display='none'; }
-
-      function switchToLogin(){
-        authTitle.textContent = 'Login';
-        authLead.textContent = 'Apna email aur password daal kar login karein.';
-        nameField.style.display = 'none';
-        authSubmit.textContent = 'Login';
-        authToggleText.innerHTML = 'Naya user? <button type="button" id="authToggleBtn" class="link">Sign up</button>';
-        // rebind toggle
-        document.getElementById('authToggleBtn').addEventListener('click', switchToSignup);
-        clearMsgs();
+      function setMode(next){
+        mode=next; clearMessages();
+        const signup=mode==="signup";
+        title.textContent=signup?"Sign up":"Login";
+        lead.textContent=signup?"Create your account to continue.":"Enter your email and password to continue.";
+        nameField.style.display=signup?"block":"none";
+        submit.textContent=signup?"Create account":"Login";
+        toggleText.innerHTML=signup
+          ? 'Already have an account? <button type="button" id="authToggleBtn" class="link">Login</button>'
+          : 'New user? <button type="button" id="authToggleBtn" class="link">Sign up</button>';
+        document.getElementById("authToggleBtn").onclick=()=>setMode(signup?"login":"signup");
       }
 
-      function switchToSignup(){
-        authTitle.textContent = 'Sign up';
-        authLead.textContent = 'Site use karne se pehle apna account banayein. Bad me login kar sakte hain.';
-        nameField.style.display = 'block';
-        authSubmit.textContent = 'Create account';
-        authToggleText.innerHTML = 'Already have an account? <button type="button" id="authToggleBtn" class="link">Login</button>';
-        document.getElementById('authToggleBtn').addEventListener('click', switchToLogin);
-        clearMsgs();
+      function saveSession(data){
+        localStorage.setItem(TOKEN_KEY,data.token);
+        localStorage.setItem(AUTH_KEY,JSON.stringify(data.user));
+        localStorage.setItem(LOGGED_KEY,data.user.email);
+      }
+      function clearSession(){
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(AUTH_KEY);
+        localStorage.removeItem(LOGGED_KEY);
       }
 
-      // Initialize overlay logic
-      const existingUser = getUser();
-      const logged = getLogged();
-
-      function showOverlayIfNeeded(){
-        // if already logged -> hide overlay
-        if(logged){
-          overlay.style.display = 'none';
-          return;
-        }
-        // otherwise block site
-        overlay.style.display = 'flex';
-        if(existingUser){
-          switchToLogin();
-        } else {
-          switchToSignup();
+      async function validateSession(){
+        const token=localStorage.getItem(TOKEN_KEY);
+        if(!token){overlay.style.display="flex";setMode("signup");return}
+        try{
+          const response=await fetch("/api/me",{headers:{Authorization:"Bearer "+token}});
+          if(!response.ok) throw new Error();
+          const data=await response.json();
+          localStorage.setItem(AUTH_KEY,JSON.stringify(data.user));
+          localStorage.setItem(LOGGED_KEY,data.user.email);
+          overlay.style.display="none";
+        }catch{
+          clearSession();
+          overlay.style.display="flex";
+          setMode("signup");
         }
       }
 
-      // If user logged in previously, allow access
-      if(getLogged()){
-        overlay.style.display = 'none';
-      } else {
-        showOverlayIfNeeded();
-      }
-      
-      // handle form submit
-      authForm.addEventListener('submit', function(e){
-        e.preventDefault();
-        clearMsgs();
-        const name = (authName.value || '').trim();
-        const email = (authEmail.value || '').trim().toLowerCase();
-        const password = (authPassword.value || '');
-
-        if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ showErr('Valid email daalein.'); return; }
-        if(password.length < 4){ showErr('Password kam se kam 4 characters ka hona chahiye.'); return; }
-
-        const user = getUser();
-
-        // if no user stored => signup
-        if(!user){
-          if(!name){ showErr('Apna naam daalein.'); return; }
-          const newUser = { name, email, password };
-          setUser(newUser);
-          setLogged(email);
-          showMsg('Account ban gaya. Site khol rahe hain...');
-          setTimeout(()=>{ overlay.style.display='none'; logoutBtn.style.display='inline-block'; }, 800);
-          return;
-        }
-
-        // If user exists -> login
-        if(user.email !== email || user.password !== password){
-          showErr('Email ya password galat hai.');
-          return;
-        }
-
-        setLogged(email);
-        showMsg('Login successful. Site khol rahe hain...');
-        setTimeout(()=>{ overlay.style.display='none'; logoutBtn.style.display='inline-block'; }, 600);
+      form.addEventListener("submit",async function(e){
+        e.preventDefault(); clearMessages();
+        const name=nameInput.value.trim();
+        const email=emailInput.value.trim().toLowerCase();
+        const password=passwordInput.value;
+        if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showError("Enter a valid email.");return}
+        if(password.length<6){showError("Password must be at least 6 characters.");return}
+        if(mode==="signup"&&!name){showError("Enter your name.");return}
+        submit.disabled=true;
+        try{
+          const response=await fetch("/api/"+mode,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(mode==="signup"?{name,email,password}:{email,password})});
+          const data=await response.json();
+          if(!response.ok) throw new Error(data.error||"Request failed.");
+          saveSession(data);
+          showMessage(mode==="signup"?"Account created successfully.":"Login successful.");
+          setTimeout(()=>overlay.style.display="none",400);
+        }catch(err){showError(err.message)}
+        finally{submit.disabled=false}
       });
 
-      // toggle (initial binding)
-      authToggleBtn.addEventListener('click', function(){
-        const modeIsSignup = nameField.style.display !== 'none' && nameField.style.display !== '';
-        if(modeIsSignup) switchToLogin(); else switchToSignup();
-      });
-
-      // Logout handler
-      logoutBtn.addEventListener('click', function(){
-        clearLogged();
-        overlay.style.display = 'flex';
-        if(getUser()) switchToLogin(); else switchToSignup();
-      });
-
-      const obs = new MutationObserver(() => {
-        if(overlay.style.display !== 'none'){
-          setTimeout(()=> {
-            if(nameField.style.display !== 'none') authName.focus();
-            else authEmail.focus();
-          }, 50);
-        }
-      });
-      obs.observe(overlay, { attributes: true, attributeFilter: ['style'] });
-
+      validateSession();
     })();
   </script>
-
 </body>
 </html>
