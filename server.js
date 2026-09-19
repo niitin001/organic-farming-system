@@ -464,7 +464,7 @@ app.patch("/api/admin/orders/:id",requireAuth,requireAdmin,async(req,res)=>{
     if(!current.rows[0])throw Object.assign(new Error("Order not found."),{status:404});
     if(current.rows[0].status==="cancelled"&&status!=="cancelled")throw Object.assign(new Error("Cancelled orders cannot be reopened."),{status:409});
     if(status==="cancelled"&&current.rows[0].status!=="cancelled"){
-      const items=await client.query("SELECT product_id,quantity FROM order_items WHERE order_id=$1",[id]);
+      const items=await client.query("SELECT oi.product_id,oi.quantity FROM order_items oi LEFT JOIN seller_orders so ON so.id=oi.seller_order_id WHERE oi.order_id=$1 AND COALESCE(so.status,'pending')<>'cancelled'",[id]);
       for(const item of items.rows)await client.query("UPDATE products SET stock=stock+$1 WHERE id=$2",[item.quantity,item.product_id]);
     }
     const updated=await client.query("UPDATE orders SET status=$1 WHERE id=$2 RETURNING id,total_amount,status,created_at",[status,id]);
