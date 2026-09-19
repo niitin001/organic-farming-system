@@ -20,10 +20,16 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false
 });
 
-app.use(cors({ origin: true, credentials: true }));
+const allowedOrigin = process.env.FRONTEND_URL || null;
+app.use(cors(allowedOrigin ? { origin: allowedOrigin, credentials: true } : { origin: false }));
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false }));
-app.use(express.static(__dirname));
+app.use((req,res,next)=>{
+  const p=req.path.toLowerCase();
+  if(p.startsWith("/.git") || ["/server.js","/package.json","/package-lock.json","/render.yaml","/.env.example"].includes(p)) return res.status(404).end();
+  next();
+});
+app.use(express.static(__dirname,{dotfiles:"deny",index:false}));
 
 function createToken(user) {
   return jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: "7d" });
@@ -311,8 +317,17 @@ app.get("/api/orders",requireAuth,async(req,res)=>{
   res.json({orders:rows});
 });
 app.post("/api/contact",requireAuth,async(req,res)=>{
-  const message=String(req.body?.message||"").trim();if(!message)return res.status(400).json({error:"Message is required."});
-  await pool.query("INSERT INTO contacts (user_id,message) VALUES ($1,$2)",[req.auth.id,message]);res.status(201).json({message:"Message received."});
+  const name=String(req.body?.name||"").trim();
+  const email=String(req.body?.email||"").trim().toLowerCase();
+  const phone=String(req.body?.phone||"").trim();
+  const subject=String(req.body?.subject||"").trim();
+  const message=String(req.body?.message||"").trim();
+  if(!name||!email||!subject||!message)return res.status(400).json({error:"Name, email, subject and message are required."});
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return res.status(400).json({error:"Enter a valid email."});
+  if(phone && !/^\d{10}$/.test(phone))return res.status(400).json({error:"Enter a valid 10-digit phone number."});
+  const storedMessage=JSON.stringify({name,email,phone,subject,message});
+  await pool.query("INSERT INTO contacts (user_id,message) VALUES ($1,$2)",[req.auth.id,storedMessage]);
+  res.status(201).json({message:"Message received."});
 });
 app.get("*",(_req,res)=>res.sendFile(path.join(__dirname,"index.html")));
 async function start(){await initDatabase();app.listen(PORT,()=>console.log("Server running on port "+PORT));}
