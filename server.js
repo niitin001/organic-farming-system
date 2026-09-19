@@ -97,8 +97,7 @@ async function initDatabase() {
     CREATE TABLE IF NOT EXISTS order_items (id SERIAL PRIMARY KEY,order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,product_id INTEGER NOT NULL REFERENCES products(id),quantity INTEGER NOT NULL CHECK (quantity > 0));
     CREATE TABLE IF NOT EXISTS seller_orders (id SERIAL PRIMARY KEY,order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,seller_id INTEGER NOT NULL REFERENCES seller_profiles(id) ON DELETE CASCADE,status VARCHAR(30) NOT NULL DEFAULT 'pending',seller_total NUMERIC(10,2) NOT NULL DEFAULT 0,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE(order_id,seller_id));
     CREATE TABLE IF NOT EXISTS contacts (id SERIAL PRIMARY KEY,user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,message TEXT NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
-    CREATE TABLE IF NOT EXISTS saved_crops (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,crop_id INTEGER NOT NULL REFERENCES crops(id) ON DELETE CASCADE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE(user_id,crop_id));
-    CREATE TABLE IF NOT EXISTS farm_tasks (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,crop_name VARCHAR(120) NOT NULL,sowing_date DATE NOT NULL,task_title VARCHAR(180) NOT NULL,task_type VARCHAR(80) NOT NULL,due_date DATE NOT NULL,status VARCHAR(30) NOT NULL DEFAULT 'pending',created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+    CREATE TABLE IF NOT EXISTS saved_crops (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,crop_id INTEGER NOT NULL REFERENCES crops(id) ON DELETE CASCADE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE(user_id,crop_id));    CREATE TABLE IF NOT EXISTS farm_tasks (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,crop_name VARCHAR(120) NOT NULL,sowing_date DATE NOT NULL,task_title VARCHAR(180) NOT NULL,task_type VARCHAR(80) NOT NULL,due_date DATE NOT NULL,status VARCHAR(30) NOT NULL DEFAULT 'pending',created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
   `);
   await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'farmer'");
   await pool.query("ALTER TABLE products ADD COLUMN IF NOT EXISTS seller_id INTEGER REFERENCES seller_profiles(id) ON DELETE SET NULL");
@@ -198,7 +197,6 @@ app.post("/api/farm-cost",async(req,res)=>{
   const total=seed+fertilizer+labour+irrigation+other,profit=revenue-total,margin=revenue?profit/revenue*100:0;
   res.json({total_cost:Math.round(total),expected_revenue:Math.round(revenue),estimated_profit:Math.round(profit),margin_percent:Math.round(margin*10)/10,per_acre_cost:Math.round(total/area)});
 });
-
 app.get("/health", async (_req,res) => {
   try { await pool.query("SELECT 1"); res.json({status:"ok",database:"connected"}); }
   catch { res.status(503).json({status:"error",database:"unavailable"}); }
@@ -297,8 +295,7 @@ app.get("/api/disease-guide",async(req,res)=>{
   const symptom=String(req.query.symptom||"").trim().toLowerCase();
   let guides=diseaseGuides.filter(g=>!crop||g.crop.toLowerCase().includes(crop)||crop.includes(g.crop.split(" ")[0].toLowerCase()));
   if(symptom) guides=guides.filter(g=>g.symptoms.some(s=>s.toLowerCase().includes(symptom))||g.issue.toLowerCase().includes(symptom)||g.cause.toLowerCase().includes(symptom));
-  res.json({guides});
-});
+  res.json({guides});});
 
 
 const marketplaceProducts = [
@@ -334,6 +331,22 @@ app.get("/api/seller/me",requireAuth,async(req,res)=>{
   const {rows}=await pool.query("SELECT id,store_name,phone,address,city,state,pincode,status,verified_at,created_at FROM seller_profiles WHERE user_id=$1",[req.auth.id]);
   res.json({seller:rows[0]||null});
 });
+app.patch("/api/seller/profile",requireAuth,async(req,res)=>{
+  const storeName=String(req.body?.storeName||"").trim();
+  const phone=String(req.body?.phone||"").trim();
+  const address=String(req.body?.address||"").trim();
+  const city=String(req.body?.city||"").trim();
+  const state=String(req.body?.state||"").trim();
+  const pincode=String(req.body?.pincode||"").trim();
+  if(!storeName||!/^[0-9]{10}$/.test(phone)||!address||!city||!state||!/^[0-9]{6}$/.test(pincode))
+    return res.status(400).json({error:"Enter valid store details, 10-digit phone and 6-digit pincode."});
+  const {rows}=await pool.query(
+    "UPDATE seller_profiles SET store_name=$1,phone=$2,address=$3,city=$4,state=$5,pincode=$6 WHERE user_id=$7 RETURNING id,store_name,phone,address,city,state,pincode,status,verified_at,created_at",
+    [storeName,phone,address,city,state,pincode,req.auth.id]
+  );
+  if(!rows[0])return res.status(404).json({error:"Seller profile not found."});
+  res.json({seller:rows[0],message:"Store profile updated."});
+});
 async function syncOrderStatus(client,orderId){
   const {rows}=await client.query("SELECT status FROM seller_orders WHERE order_id=$1",[orderId]);
   if(!rows.length)return;
@@ -367,6 +380,46 @@ app.get("/api/seller/products",requireAuth,requireSeller,async(req,res)=>{
   const {rows}=await pool.query("SELECT id,name,category,price,stock,image FROM products WHERE seller_id=$1 ORDER BY id DESC",[req.seller.id]);
   res.json({products:rows});
 });
+app.get("/api/seller/analytics",requireAuth,requireSeller,async(req,res)=>{
+  const [summary,monthly,topProducts]=await Promise.all([
+    pool.query(`SELECT
+      COUNT(DISTINCT so.id)::int AS orders,
+      COUNT(DISTINCT CASE WHEN so.status='pending' THEN so.id END)::int AS pending_orders,
+      COUNT(DISTINCT CASE WHEN so.status='delivered' THEN so.id END)::int AS delivered_orders,
+      COUNT(DISTINCT oi.product_id)::int AS products_sold,
+      COALESCE(SUM(CASE WHEN so.status<>'cancelled' THEN so.seller_total ELSE 0 END),0)::numeric AS revenue
+      FROM seller_orders so
+      LEFT JOIN order_items oi ON oi.seller_order_id=so.id
+      WHERE so.seller_id=$1`,[req.seller.id]),
+    pool.query(`SELECT TO_CHAR(DATE_TRUNC('month',so.created_at),'Mon YYYY') AS month,
+      COALESCE(SUM(CASE WHEN so.status<>'cancelled' THEN so.seller_total ELSE 0 END),0)::numeric AS revenue,
+      COUNT(*)::int AS orders
+      FROM seller_orders so
+      WHERE so.seller_id=$1 AND so.created_at >= DATE_TRUNC('month',CURRENT_DATE) - INTERVAL '5 months'
+      GROUP BY DATE_TRUNC('month',so.created_at)
+      ORDER BY DATE_TRUNC('month',so.created_at)`,[req.seller.id]),
+    pool.query(`SELECT p.name,SUM(oi.quantity)::int AS quantity,
+      COALESCE(SUM(oi.quantity*p.price),0)::numeric AS revenue
+      FROM order_items oi
+      JOIN seller_orders so ON so.id=oi.seller_order_id
+      JOIN products p ON p.id=oi.product_id
+      WHERE so.seller_id=$1 AND so.status<>'cancelled'
+      GROUP BY p.id,p.name
+      ORDER BY quantity DESC
+      LIMIT 5`,[req.seller.id])
+  ]);
+  res.json({
+    summary:{
+      orders:summary.rows[0].orders,
+      pendingOrders:summary.rows[0].pending_orders,
+      deliveredOrders:summary.rows[0].delivered_orders,
+      productsSold:summary.rows[0].products_sold,
+      revenue:Number(summary.rows[0].revenue)
+    },
+    monthly:monthly.rows.map(x=>({month:x.month,revenue:Number(x.revenue),orders:x.orders})),
+    topProducts:topProducts.rows.map(x=>({name:x.name,quantity:x.quantity,revenue:Number(x.revenue)}))
+  });
+});
 app.post("/api/seller/products",requireAuth,requireSeller,async(req,res)=>{
   const name=String(req.body?.name||"").trim(),category=String(req.body?.category||"").trim(),price=Number(req.body?.price),stock=Number(req.body?.stock),image=String(req.body?.image||"").trim();
   if(!name||!category||!Number.isFinite(price)||price<0||!Number.isInteger(stock)||stock<0) return res.status(400).json({error:"Enter valid product details."});
@@ -397,8 +450,7 @@ app.patch("/api/admin/sellers/:id",requireAuth,requireAdmin,async(req,res)=>{
   if(!rows[0])return res.status(404).json({error:"Seller application not found."});
   await pool.query("UPDATE users SET role=CASE WHEN $1=$3 THEN $4 ELSE $5 END WHERE id=$2 AND role<>$6",[status,rows[0].user_id,"approved","seller","farmer","admin"]);
   res.json({seller:rows[0]});
-});
-app.post("/api/orders",requireAuth,async(req,res)=>{
+});app.post("/api/orders",requireAuth,async(req,res)=>{
   const items=Array.isArray(req.body?.items)?req.body.items:[];
   const clean=items.map(i=>({productId:Number(i.productId),quantity:Number(i.quantity)})).filter(i=>Number.isInteger(i.productId)&&Number.isInteger(i.quantity)&&i.quantity>0);
   if(!clean.length)return res.status(400).json({error:"Cart is empty."});
@@ -498,7 +550,6 @@ app.get("/api/admin/contacts",requireAuth,requireAdmin,async(_req,res)=>{
   const {rows}=await pool.query("SELECT id,user_id,message,created_at FROM contacts ORDER BY created_at DESC LIMIT 100");
   res.json({contacts:rows});
 });
-
 
 app.post("/api/contact",requireAuth,async(req,res)=>{
   const name=String(req.body?.name||"").trim();
