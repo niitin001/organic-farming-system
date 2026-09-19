@@ -341,6 +341,15 @@ async function requireSeller(req,res,next){
     req.seller=rows[0]; next();
   }catch(error){console.error(error);res.status(500).json({error:"Unable to verify seller access."});}
 }
+app.get("/api/sellers/:id",async(req,res)=>{
+  const id=Number(req.params.id);
+  if(!Number.isInteger(id))return res.status(400).json({error:"Invalid seller id."});
+  const seller=await pool.query("SELECT sp.id,sp.store_name,sp.phone,sp.address,sp.city,sp.state,sp.pincode,sp.status,sp.verified_at,sp.created_at FROM seller_profiles sp WHERE sp.id=$1 AND sp.status='approved'",[id]);
+  if(!seller.rows[0])return res.status(404).json({error:"Verified seller not found."});
+  const products=await pool.query("SELECT id,name,category,price,stock,image FROM products WHERE seller_id=$1 AND stock>=0 ORDER BY id DESC",[id]);
+  res.json({seller:seller.rows[0],products:products.rows});
+});
+
 app.get("/api/seller/products",requireAuth,requireSeller,async(req,res)=>{
   const {rows}=await pool.query("SELECT id,name,category,price,stock,image FROM products WHERE seller_id=$1 ORDER BY id DESC",[req.seller.id]);
   res.json({products:rows});
