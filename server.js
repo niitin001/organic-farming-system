@@ -83,6 +83,7 @@ async function sendContactEmail({name,email,phone,subject,message}) {
   if (!response.ok) throw new Error(`Email delivery failed: ${response.status}`);
   return {sent:true};
 }
+function parseDataUrl(value,{maxBytes=2*1024*1024,allowed=["image/jpeg","image/png","image/webp","application/pdf"]}={}) { const s=String(value||"").trim(); const m=s.match(/^data:([^;]+);base64,(.+)$/); if(!m||!allowed.includes(m[1])) throw new Error("Unsupported file. Use JPG, PNG, WEBP or PDF."); if(Buffer.byteLength(m[2],"base64")>maxBytes) throw new Error("File is too large. Maximum size is 2 MB."); return s; }
 function escapeHtml(value){
   return String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
 }
@@ -99,10 +100,12 @@ async function initDatabase() {
     CREATE TABLE IF NOT EXISTS contacts (id SERIAL PRIMARY KEY,user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,message TEXT NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS saved_crops (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,crop_id INTEGER NOT NULL REFERENCES crops(id) ON DELETE CASCADE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE(user_id,crop_id));    CREATE TABLE IF NOT EXISTS farm_tasks (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,crop_name VARCHAR(120) NOT NULL,sowing_date DATE NOT NULL,task_title VARCHAR(180) NOT NULL,task_type VARCHAR(80) NOT NULL,due_date DATE NOT NULL,status VARCHAR(30) NOT NULL DEFAULT 'pending',created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS product_reviews (id SERIAL PRIMARY KEY,product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,seller_order_id INTEGER NOT NULL REFERENCES seller_orders(id) ON DELETE CASCADE,rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),comment TEXT,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE(user_id,product_id,order_id));
+    CREATE TABLE IF NOT EXISTS seller_documents (id SERIAL PRIMARY KEY,seller_id INTEGER NOT NULL REFERENCES seller_profiles(id) ON DELETE CASCADE,document_type VARCHAR(40) NOT NULL,document_name VARCHAR(180) NOT NULL,document_data TEXT NOT NULL,status VARCHAR(20) NOT NULL DEFAULT 'pending',admin_note TEXT,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),reviewed_at TIMESTAMPTZ);
   `);
   await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'farmer'");
   await pool.query("ALTER TABLE products ADD COLUMN IF NOT EXISTS seller_id INTEGER REFERENCES seller_profiles(id) ON DELETE SET NULL");
   await pool.query("ALTER TABLE order_items ADD COLUMN IF NOT EXISTS seller_order_id INTEGER REFERENCES seller_orders(id) ON DELETE SET NULL");
+  await pool.query("ALTER TABLE seller_profiles ADD COLUMN IF NOT EXISTS verification_notes TEXT");
   if(process.env.ADMIN_EMAIL){await pool.query("UPDATE users SET role='admin' WHERE lower(email)=lower($1)",[String(process.env.ADMIN_EMAIL).trim()]);}
   await pool.query("DELETE FROM crops a USING crops b WHERE a.name = b.name AND a.id > b.id");
   await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS crops_name_unique ON crops(name)");
@@ -322,15 +325,24 @@ app.get("/api/products",async(req,res)=>{
 });
 app.post("/api/seller/apply",requireAuth,async(req,res)=>{
   const storeName=String(req.body?.storeName||"").trim(),phone=String(req.body?.phone||"").trim(),address=String(req.body?.address||"").trim(),city=String(req.body?.city||"").trim(),state=String(req.body?.state||"").trim(),pincode=String(req.body?.pincode||"").trim();
+  const documents=Array.isArray(req.body?.documents)?req.body.documents:[];
   if(!storeName||!phone||!address||!city||!state||!/^[0-9]{6}$/.test(pincode)) return res.status(400).json({error:"Store name, phone, address, city, state and 6-digit pincode are required."});
+  if(documents.length>3)return res.status(400).json({error:"Upload up to 3 verification documents."});
   const existing=await pool.query("SELECT id,status FROM seller_profiles WHERE user_id=$1",[req.auth.id]);
   if(existing.rows[0]) return res.status(409).json({error:"Seller application already exists with status: "+existing.rows[0].status+"."});
   const {rows}=await pool.query("INSERT INTO seller_profiles (user_id,store_name,phone,address,city,state,pincode) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id,store_name,status,city,state,pincode,created_at",[req.auth.id,storeName,phone,address,city,state,pincode]);
-  res.status(201).json({seller:rows[0],message:"Application submitted. Products become visible after admin verification."});
+  const seller=rows[0];
+  for(const doc of documents){
+    const type=String(doc?.type||"").trim().toLowerCase(),name=String(doc?.name||"document").trim().slice(0,180);
+    if(!["shop_license","gst","identity","address_proof"].includes(type))return res.status(400).json({error:"Invalid document type."});
+    let data;try{data=parseDataUrl(doc?.data,{maxBytes:2*1024*1024});}catch(e){return res.status(400).json({error:e.message});}
+    await pool.query("INSERT INTO seller_documents (seller_id,document_type,document_name,document_data) VALUES ($1,$2,$3,$4)",[seller.id,type,name,data]);
+  }
+  res.status(201).json({seller,message:"Application submitted. Admin verification is required before products become visible."});
 });
 app.get("/api/seller/me",requireAuth,async(req,res)=>{
   const {rows}=await pool.query("SELECT id,store_name,phone,address,city,state,pincode,status,verified_at,created_at FROM seller_profiles WHERE user_id=$1",[req.auth.id]);
-  res.json({seller:rows[0]||null});
+  const seller=rows[0]||null; if(!seller)return res.json({seller:null,documents:[]}); const docs=await pool.query("SELECT id,document_type,document_name,status,admin_note,created_at,reviewed_at FROM seller_documents WHERE seller_id=$1 ORDER BY created_at DESC",[seller.id]); res.json({seller,documents:docs.rows});
 });
 app.patch("/api/seller/profile",requireAuth,async(req,res)=>{
   const storeName=String(req.body?.storeName||"").trim();
@@ -422,14 +434,15 @@ app.get("/api/seller/analytics",requireAuth,requireSeller,async(req,res)=>{
   });
 });
 app.post("/api/seller/products",requireAuth,requireSeller,async(req,res)=>{
-  const name=String(req.body?.name||"").trim(),category=String(req.body?.category||"").trim(),price=Number(req.body?.price),stock=Number(req.body?.stock),image=String(req.body?.image||"").trim();
-  if(!name||!category||!Number.isFinite(price)||price<0||!Number.isInteger(stock)||stock<0) return res.status(400).json({error:"Enter valid product details."});
-  const {rows}=await pool.query("INSERT INTO products (name,category,price,stock,image,seller_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *",[name,category,price,stock,image,req.seller.id]);
-  res.status(201).json({product:rows[0]});
+  const name=String(req.body?.name||"").trim(),category=String(req.body?.category||"").trim(),price=Number(req.body?.price),stock=Number(req.body?.stock); let image=String(req.body?.image||"").trim();
+  if(req.body?.imageData){try{image=parseDataUrl(req.body.imageData,{maxBytes:2*1024*1024,allowed:["image/jpeg","image/png","image/webp"]});}catch(e){return res.status(400).json({error:e.message});}}
+  if(!name||!category||!Number.isFinite(price)||price<0||!Number.isInteger(stock)||stock<0)return res.status(400).json({error:"Enter valid product details."});
+  const {rows}=await pool.query("INSERT INTO products (name,category,price,stock,image,seller_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *",[name,category,price,stock,image,req.seller.id]); res.status(201).json({product:rows[0]});
 });
 app.patch("/api/seller/products/:id",requireAuth,requireSeller,async(req,res)=>{
-  const id=Number(req.params.id),name=String(req.body?.name||"").trim(),category=String(req.body?.category||"").trim(),price=Number(req.body?.price),stock=Number(req.body?.stock),image=String(req.body?.image||"").trim();
-  if(!Number.isInteger(id)||!name||!category||!Number.isFinite(price)||price<0||!Number.isInteger(stock)||stock<0)return res.status(400).json({error:"Enter valid product details."});
+  const id=Number(req.params.id),name=String(req.body?.name||"").trim(),category=String(req.body?.category||"").trim(),price=Number(req.body?.price),stock=Number(req.body?.stock); let image=String(req.body?.image||"").trim();
+  if(req.body?.imageData){try{image=parseDataUrl(req.body.imageData,{maxBytes:2*1024*1024,allowed:["image/jpeg","image/png","image/webp"]});}catch(e){return res.status(400).json({error:e.message});}}
+  if(!Number.isInteger(id)||!name||!category||!Number.isFinite(price)||price<0||!Number.isInteger(stock))return res.status(400).json({error:"Enter valid product details."});
   const {rows}=await pool.query("UPDATE products SET name=$1,category=$2,price=$3,stock=$4,image=$5 WHERE id=$6 AND seller_id=$7 RETURNING *",[name,category,price,stock,image,id,req.seller.id]);
   if(!rows[0])return res.status(404).json({error:"Seller product not found."});
   res.json({product:rows[0]});
@@ -441,17 +454,28 @@ app.delete("/api/seller/products/:id",requireAuth,requireSeller,async(req,res)=>
   res.json({deleted:true});
 });
 app.get("/api/admin/sellers",requireAuth,requireAdmin,async(_req,res)=>{
-  const {rows}=await pool.query("SELECT sp.id,sp.user_id,sp.store_name,sp.phone,sp.address,sp.city,sp.state,sp.pincode,sp.status,sp.verified_at,sp.created_at,u.name,u.email FROM seller_profiles sp JOIN users u ON u.id=sp.user_id ORDER BY sp.created_at DESC");
+  const {rows}=await pool.query("SELECT sp.id,sp.user_id,sp.store_name,sp.phone,sp.address,sp.city,sp.state,sp.pincode,sp.status,sp.verified_at,sp.verification_notes,sp.created_at,u.name,u.email,(SELECT COUNT(*)::int FROM seller_documents sd WHERE sd.seller_id=sp.id) AS document_count FROM seller_profiles sp JOIN users u ON u.id=sp.user_id ORDER BY sp.created_at DESC");
   res.json({sellers:rows});
 });
+app.get("/api/admin/sellers/:id/documents",requireAuth,requireAdmin,async(req,res)=>{
+  const id=Number(req.params.id); if(!Number.isInteger(id))return res.status(400).json({error:"Invalid seller id."});
+  const {rows}=await pool.query("SELECT id,document_type,document_name,document_data,status,admin_note,created_at,reviewed_at FROM seller_documents WHERE seller_id=$1 ORDER BY created_at DESC",[id]); res.json({documents:rows});
+});
 app.patch("/api/admin/sellers/:id",requireAuth,requireAdmin,async(req,res)=>{
-  const id=Number(req.params.id),status=String(req.body?.status||"").trim().toLowerCase();
+  const id=Number(req.params.id),status=String(req.body?.status||"").trim().toLowerCase(),note=String(req.body?.note||"").trim().slice(0,1000);
   if(!Number.isInteger(id)||!["pending","approved","rejected"].includes(status))return res.status(400).json({error:"Invalid seller status."});
-  const {rows}=await pool.query("UPDATE seller_profiles SET status=$1,verified_at=CASE WHEN $1=$3 THEN NOW() ELSE NULL END WHERE id=$2 RETURNING *",[status,id,"approved"]);
+  const {rows}=await pool.query("UPDATE seller_profiles SET status=$1,verification_notes=$2,verified_at=CASE WHEN $1=$3 THEN NOW() ELSE NULL END WHERE id=$4 RETURNING *",[status,note,"approved",id]);
   if(!rows[0])return res.status(404).json({error:"Seller application not found."});
   await pool.query("UPDATE users SET role=CASE WHEN $1=$3 THEN $4 ELSE $5 END WHERE id=$2 AND role<>$6",[status,rows[0].user_id,"approved","seller","farmer","admin"]);
   res.json({seller:rows[0]});
-});app.post("/api/orders",requireAuth,async(req,res)=>{
+});
+app.patch("/api/admin/seller-documents/:id",requireAuth,requireAdmin,async(req,res)=>{
+  const id=Number(req.params.id),status=String(req.body?.status||"").trim().toLowerCase(),note=String(req.body?.note||"").trim().slice(0,1000);
+  if(!Number.isInteger(id)||!["pending","approved","rejected"].includes(status))return res.status(400).json({error:"Invalid document status."});
+  const {rows}=await pool.query("UPDATE seller_documents SET status=$1,admin_note=$2,reviewed_at=NOW() WHERE id=$3 RETURNING id,document_type,document_name,status,admin_note,reviewed_at",[status,note,id]);
+  if(!rows[0])return res.status(404).json({error:"Document not found."}); res.json({document:rows[0]});
+});
+app.post("/api/orders",requireAuth,async(req,res)=>{
   const items=Array.isArray(req.body?.items)?req.body.items:[];
   const clean=items.map(i=>({productId:Number(i.productId),quantity:Number(i.quantity)})).filter(i=>Number.isInteger(i.productId)&&Number.isInteger(i.quantity)&&i.quantity>0);
   if(!clean.length)return res.status(400).json({error:"Cart is empty."});
