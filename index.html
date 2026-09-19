@@ -340,5 +340,6 @@
   validateSession();
 })();
 </script>
-</body>
+
+<script>(function(){const d={hi:{home:"होम",weather:"मौसम",marketplace:"मार्केटप्लेस"}};function setLang(l){localStorage.setItem("ffs_lang",l);document.querySelectorAll("[data-i18n]").forEach(e=>{const k=e.dataset.i18n;if(l==="hi"&&d.hi[k])e.textContent=d.hi[k];else if(l==="en"){e.textContent={home:"Home",weather:"Weather",marketplace:"Marketplace"}[k]||e.textContent}})}window.setLang=setLang;const l=localStorage.getItem("ffs_lang")||"en";setLang(l)})();</script></body>
 </html>
