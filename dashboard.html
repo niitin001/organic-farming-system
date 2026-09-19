@@ -9,7 +9,7 @@ body{padding-top:86px}.dash{padding:55px 0 80px}.dash-head{display:flex;justify-
 </style>
 </head>
 <body>
-<header class="site-header"><div class="header-inner"><a class="brand" href="index.html"><span class="brand-mark">🌱</span><span><strong>Farmer</strong> Friendly</span></a><nav class="main-nav"><a href="index.html" data-i18n="home">Home</a><a href="crop-recommendation.html">Smart Crop</a><a href="weather.html" data-i18n="weather">Weather</a><a href="marketplace.html" data-i18n="marketplace">Marketplace</a><div class="lang-switch"><button data-lang="en" class="active">EN</button><button data-lang="hi">हि</button></div></nav></div></header>
+<header class="site-header"><div class="header-inner"><a class="brand" href="index.html"><span class="brand-mark">🌱</span><span><strong>Farmer</strong> Friendly</span></a><nav class="main-nav"><a href="index.html" data-i18n="home">Home</a><a href="crop-recommendation.html">Smart Crop</a><a href="weather.html" data-i18n="weather">Weather</a><a href="marketplace.html" data-i18n="marketplace">Marketplace</a><a href="admin.html" id="adminNav" style="display:none">Admin</a><div class="lang-switch"><button data-lang="en" class="active">EN</button><button data-lang="hi">हि</button></div></nav></div></header>
 <main class="dash"><div class="container">
 <div class="dash-head"><div><div class="kicker">FARMER DASHBOARD</div><h1>Welcome to your<br><span>smart farm workspace.</span></h1><p class="muted">Use one dashboard to plan crops, check conditions and access the next generation of Farmer Friendly tools.</p></div><div class="welcome"><small>Signed in as</small><strong id="userName">Farmer</strong><button class="logout" id="logout">Log out</button></div></div>
 <div class="dash-grid">
@@ -32,7 +32,7 @@ async function loadDashboard(){
  if(!token){location.href="index.html";return}
  try{
   const me=await fetch("/api/me",{headers:{Authorization:"Bearer "+token}}); if(!me.ok)throw new Error();
-  const user=(await me.json()).user; document.getElementById("userName").textContent=user.name;
+  const user=(await me.json()).user; document.getElementById("userName").textContent=user.name; if(user.role==="admin")document.getElementById("adminNav").style.display="inline-block";
   const r=await fetch("/api/saved-crops",{headers:{Authorization:"Bearer "+token}}); if(!r.ok)throw new Error();
   const data=await r.json(); document.getElementById("savedCount").textContent=data.savedCrops.length;
   const list=document.getElementById("savedList");
