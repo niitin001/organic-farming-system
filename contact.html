@@ -205,60 +205,60 @@
   </div>
 
   <script>
-    document.getElementById('contactForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      
-      // Get form data
-      const name = document.getElementById('name').value;
-      const email = document.getElementById('email').value;
-      const phone = document.getElementById('phone').value;
-      const subject = document.getElementById('subject').value;
-      const message = document.getElementById('message').value;
+    const token = localStorage.getItem('ffs_token');
+    const user = JSON.parse(localStorage.getItem('ffs_user') || 'null');
+    const form = document.getElementById('contactForm');
+    const successMessage = document.getElementById('successMessage');
 
-      // Validate phone number
-      if (phone.length !== 10) {
-        alert('Please enter a valid 10-digit phone number');
+    if (!token || !user) {
+      alert('Please login before sending a message.');
+      window.location.href = 'login.html?next=contact.html';
+    } else {
+      document.getElementById('name').value = user.name || '';
+      document.getElementById('email').value = user.email || '';
+      document.getElementById('name').readOnly = true;
+      document.getElementById('email').readOnly = true;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!token) return;
+
+      const phone = document.getElementById('phone').value.trim();
+      if (phone && !/^\d{10}$/.test(phone)) {
+        alert('Please enter a valid 10-digit phone number.');
         return;
       }
 
-      // Store in localStorage (you can later send to server)
-      const contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
-      contacts.push({
-        name,
-        email,
-        phone,
-        subject,
-        message,
-        timestamp: new Date().toLocaleString('hi-IN')
-      });
-      localStorage.setItem('contacts', JSON.stringify(contacts));
+      const button = form.querySelector('button');
+      button.disabled = true;
+      button.textContent = 'Sending...';
 
-      // Show success message
-      document.getElementById('successMessage').style.display = 'block';
-      
-      // Reset form
-      this.reset();
-
-      // Hide success message after 5 seconds
-      setTimeout(() => {
-        document.getElementById('successMessage').style.display = 'none';
-      }, 5000);
-
-      console.log('Contact submitted:', { name, email, phone, subject, message });
-    });
-
-    // Show logout button if user is logged in
-    window.addEventListener('load', function() {
-      const user = localStorage.getItem('user');
-      const logoutBtn = document.getElementById('logoutBtn');
-      if (user && logoutBtn) {
-        logoutBtn.style.display = 'inline-block';
-        logoutBtn.addEventListener('click', function() {
-          localStorage.removeItem('user');
-          location.href = 'index.html';
+      try {
+        const response = await fetch('/api/contact', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+          body: JSON.stringify({
+            name: document.getElementById('name').value.trim(),
+            email: document.getElementById('email').value.trim(),
+            phone,
+            subject: document.getElementById('subject').value.trim(),
+            message: document.getElementById('message').value.trim()
+          })
         });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Unable to send message.');
+        successMessage.textContent = '✓ Your message has been saved successfully.';
+        successMessage.style.display = 'block';
+        form.reset();
+        document.getElementById('name').value = user.name || '';
+        document.getElementById('email').value = user.email || '';
+      } catch (error) {
+        alert(error.message);
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Send Message';
       }
     });
-  </script>
-</body>
+  </script>body>
 </html>
