@@ -61,6 +61,32 @@ const cropProfiles = [
   {name:"Vegetables",icon:"🥬",seasons:["kharif","rabi","zaid"],soils:["loamy"],water:"medium",duration:"45–120 days",reason:"Loamy soil and moderate water support a broad range of seasonal vegetables.",description:"A broad category covering seasonal vegetables with varied crop cycles."}
 ];
 
+async function sendContactEmail({name,email,phone,subject,message}) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const recipient = process.env.CONTACT_EMAIL;
+  if (!apiKey || !recipient) return {sent:false};
+
+  const from = process.env.RESEND_FROM_EMAIL || "Organic Farming System <onboarding@resend.dev>";
+  const html = `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#183b22">
+    <h2>New Contact Form Message</h2>
+    <p><strong>Name:</strong> ${escapeHtml(name)}</p>
+    <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+    <p><strong>Phone:</strong> ${escapeHtml(phone || "Not provided")}</p>
+    <p><strong>Subject:</strong> ${escapeHtml(subject)}</p>
+    <hr><p style="white-space:pre-wrap">${escapeHtml(message)}</p>
+  </div>`;
+  const response = await fetch("https://api.resend.com/emails", {
+    method:"POST",
+    headers:{"Authorization":`Bearer ${apiKey}`,"Content-Type":"application/json"},
+    body:JSON.stringify({from,to:[recipient],reply_to:email,subject:`Contact Form: ${subject}`,html})
+  });
+  if (!response.ok) throw new Error(`Email delivery failed: ${response.status}`);
+  return {sent:true};
+}
+function escapeHtml(value){
+  return String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
+}
+
 async function initDatabase() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY,name VARCHAR(120) NOT NULL,email VARCHAR(255) UNIQUE NOT NULL,password_hash TEXT NOT NULL,role VARCHAR(20) NOT NULL DEFAULT 'farmer',created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
@@ -399,7 +425,13 @@ app.post("/api/contact",requireAuth,async(req,res)=>{
   if(phone && !/^\d{10}$/.test(phone))return res.status(400).json({error:"Enter a valid 10-digit phone number."});
   const storedMessage=JSON.stringify({name,email,phone,subject,message});
   await pool.query("INSERT INTO contacts (user_id,message) VALUES ($1,$2)",[req.auth.id,storedMessage]);
-  res.status(201).json({message:"Message received."});
+  try {
+    const emailResult = await sendContactEmail({name,email,phone,subject,message});
+    res.status(201).json({message:emailResult.sent ? "Message received and email notification sent." : "Message received. Email notification is not configured yet.",emailSent:emailResult.sent});
+  } catch(error) {
+    console.error("Contact email error:",error);
+    res.status(201).json({message:"Message received, but email notification could not be sent.",emailSent:false});
+  }
 });
 app.get("*",(_req,res)=>res.sendFile(path.join(__dirname,"index.html")));
 async function start(){await initDatabase();app.listen(PORT,()=>console.log("Server running on port "+PORT));}
