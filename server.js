@@ -34,6 +34,10 @@ app.use(express.static(__dirname,{dotfiles:"deny",index:false}));
 function createToken(user) {
   return jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: "7d" });
 }
+async function requireAdmin(req,res,next){
+  try{const {rows}=await pool.query("SELECT role FROM users WHERE id=$1",[req.auth.id]);if(rows[0]?.role!=="admin")return res.status(403).json({error:"Admin access required."});next();}
+  catch(error){console.error(error);res.status(500).json({error:"Unable to verify admin access."});}
+}
 function getToken(req) {
   const header = req.headers.authorization || "";
   return header.startsWith("Bearer ") ? header.slice(7) : null;
@@ -59,7 +63,7 @@ const cropProfiles = [
 
 async function initDatabase() {
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY,name VARCHAR(120) NOT NULL,email VARCHAR(255) UNIQUE NOT NULL,password_hash TEXT NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+    CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY,name VARCHAR(120) NOT NULL,email VARCHAR(255) UNIQUE NOT NULL,password_hash TEXT NOT NULL,role VARCHAR(20) NOT NULL DEFAULT 'farmer',created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS crops (id SERIAL PRIMARY KEY,name VARCHAR(120) UNIQUE NOT NULL,season VARCHAR(120),soil_type VARCHAR(200),duration VARCHAR(80),water_requirement VARCHAR(80),description TEXT);
     CREATE TABLE IF NOT EXISTS products (id SERIAL PRIMARY KEY,name VARCHAR(160) NOT NULL,category VARCHAR(80),price NUMERIC(10,2) NOT NULL DEFAULT 0,stock INTEGER NOT NULL DEFAULT 0,image TEXT);
     CREATE TABLE IF NOT EXISTS orders (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,total_amount NUMERIC(10,2) NOT NULL DEFAULT 0,status VARCHAR(40) NOT NULL DEFAULT 'pending',created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
@@ -68,6 +72,8 @@ async function initDatabase() {
     CREATE TABLE IF NOT EXISTS saved_crops (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,crop_id INTEGER NOT NULL REFERENCES crops(id) ON DELETE CASCADE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE(user_id,crop_id));
     CREATE TABLE IF NOT EXISTS farm_tasks (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,crop_name VARCHAR(120) NOT NULL,sowing_date DATE NOT NULL,task_title VARCHAR(180) NOT NULL,task_type VARCHAR(80) NOT NULL,due_date DATE NOT NULL,status VARCHAR(30) NOT NULL DEFAULT 'pending',created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
   `);
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'farmer'");
+  if(process.env.ADMIN_EMAIL){await pool.query("UPDATE users SET role='admin' WHERE lower(email)=lower($1)",[String(process.env.ADMIN_EMAIL).trim()]);}
   await pool.query("DELETE FROM crops a USING crops b WHERE a.name = b.name AND a.id > b.id");
   await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS crops_name_unique ON crops(name)");
   await pool.query("DELETE FROM products a USING products b WHERE a.name = b.name AND a.id > b.id");
@@ -75,7 +81,7 @@ async function initDatabase() {
   for (const product of marketplaceProducts) {
     await pool.query(
       `INSERT INTO products (name,category,price,stock,image) VALUES ($1,$2,$3,$4,$5)
-       ON CONFLICT (name) DO UPDATE SET category=EXCLUDED.category,price=EXCLUDED.price,stock=EXCLUDED.stock,image=EXCLUDED.image`,
+       ON CONFLICT (name) DO UPDATE SET category=EXCLUDED.category,image=EXCLUDED.image`,
       [product.name,product.category,product.price,product.stock,product.image]
     );
   }
@@ -173,7 +179,7 @@ app.post("/api/signup", async (req,res) => {
     const name=String(req.body?.name||"").trim(), email=String(req.body?.email||"").trim().toLowerCase(), password=String(req.body?.password||"");
     if(!name||!email||password.length<6) return res.status(400).json({error:"Name, valid email and password (6+ characters) are required."});
     const passwordHash=await bcrypt.hash(password,12);
-    const {rows}=await pool.query("INSERT INTO users (name,email,password_hash) VALUES ($1,$2,$3) RETURNING id,name,email",[name,email,passwordHash]);
+    const {rows}=await pool.query("INSERT INTO users (name,email,password_hash) VALUES ($1,$2,$3) RETURNING id,name,email,role",[name,email,passwordHash]);
     const user=rows[0]; res.status(201).json({token:createToken(user),user});
   } catch(error) { if(error.code==="23505") return res.status(409).json({error:"User already exists."}); console.error(error); res.status(500).json({error:"Unable to create account."}); }
 });
@@ -181,14 +187,14 @@ app.post("/api/signup", async (req,res) => {
 app.post("/api/login", async (req,res) => {
   try {
     const email=String(req.body?.email||"").trim().toLowerCase(), password=String(req.body?.password||"");
-    const {rows}=await pool.query("SELECT id,name,email,password_hash FROM users WHERE email=$1",[email]);
+    const {rows}=await pool.query("SELECT id,name,email,password_hash,role FROM users WHERE email=$1",[email]);
     if(!rows[0]||!(await bcrypt.compare(password,rows[0].password_hash))) return res.status(401).json({error:"Invalid email or password."});
-    const user={id:rows[0].id,name:rows[0].name,email:rows[0].email}; res.json({token:createToken(user),user});
+    const user={id:rows[0].id,name:rows[0].name,email:rows[0].email,role:rows[0].role}; res.json({token:createToken(user),user});
   } catch(error) { console.error(error); res.status(500).json({error:"Unable to login."}); }
 });
 
 app.get("/api/me",requireAuth,async(req,res)=>{
-  const {rows}=await pool.query("SELECT id,name,email FROM users WHERE id=$1",[req.auth.id]);
+  const {rows}=await pool.query("SELECT id,name,email,role FROM users WHERE id=$1",[req.auth.id]);
   if(!rows[0]) return res.status(404).json({error:"User not found."}); res.json({user:rows[0]});
 });
 
@@ -316,6 +322,72 @@ app.get("/api/orders",requireAuth,async(req,res)=>{
     WHERE o.user_id=$1 GROUP BY o.id ORDER BY o.created_at DESC`,[req.auth.id]);
   res.json({orders:rows});
 });
+
+app.get("/api/admin/stats",requireAuth,requireAdmin,async(_req,res)=>{
+  const [users,products,orders,pending,contacts,value]=await Promise.all([
+    pool.query("SELECT COUNT(*)::int AS count FROM users"),
+    pool.query("SELECT COUNT(*)::int AS count FROM products"),
+    pool.query("SELECT COUNT(*)::int AS count FROM orders"),
+    pool.query("SELECT COUNT(*)::int AS count FROM orders WHERE status='pending'"),
+    pool.query("SELECT COUNT(*)::int AS count FROM contacts"),
+    pool.query("SELECT COALESCE(SUM(total_amount),0)::numeric AS total FROM orders WHERE status<>'cancelled'")
+  ]);
+  res.json({stats:{users:users.rows[0].count,products:products.rows[0].count,orders:orders.rows[0].count,pendingOrders:pending.rows[0].count,contacts:contacts.rows[0].count,orderValue:Number(value.rows[0].total)}});
+});
+app.get("/api/admin/users",requireAuth,requireAdmin,async(_req,res)=>{
+  const {rows}=await pool.query("SELECT id,name,email,role,created_at FROM users ORDER BY created_at DESC LIMIT 100");
+  res.json({users:rows});
+});
+app.get("/api/admin/products",requireAuth,requireAdmin,async(_req,res)=>{
+  const {rows}=await pool.query("SELECT id,name,category,price,stock,image FROM products ORDER BY id");
+  res.json({products:rows});
+});
+app.post("/api/admin/products",requireAuth,requireAdmin,async(req,res)=>{
+  const name=String(req.body?.name||"").trim(),category=String(req.body?.category||"").trim(),price=Number(req.body?.price),stock=Number(req.body?.stock),image=String(req.body?.image||"").trim();
+  if(!name||!category||!Number.isFinite(price)||price<0||!Number.isInteger(stock)||stock<0)return res.status(400).json({error:"Enter valid product details."});
+  try{const {rows}=await pool.query("INSERT INTO products (name,category,price,stock,image) VALUES ($1,$2,$3,$4,$5) RETURNING *",[name,category,price,stock,image]);res.status(201).json({product:rows[0]});}
+  catch(error){if(error.code==="23505")return res.status(409).json({error:"A product with this name already exists."});console.error(error);res.status(500).json({error:"Unable to create product."});}
+});
+app.patch("/api/admin/products/:id",requireAuth,requireAdmin,async(req,res)=>{
+  const id=Number(req.params.id),name=String(req.body?.name||"").trim(),category=String(req.body?.category||"").trim(),price=Number(req.body?.price),stock=Number(req.body?.stock),image=String(req.body?.image||"").trim();
+  if(!Number.isInteger(id)||!name||!category||!Number.isFinite(price)||price<0||!Number.isInteger(stock)||stock<0)return res.status(400).json({error:"Enter valid product details."});
+  try{const {rows}=await pool.query("UPDATE products SET name=$1,category=$2,price=$3,stock=$4,image=$5 WHERE id=$6 RETURNING *",[name,category,price,stock,image,id]);if(!rows[0])return res.status(404).json({error:"Product not found."});res.json({product:rows[0]});}
+  catch(error){if(error.code==="23505")return res.status(409).json({error:"A product with this name already exists."});console.error(error);res.status(500).json({error:"Unable to update product."});}
+});
+app.delete("/api/admin/products/:id",requireAuth,requireAdmin,async(req,res)=>{
+  const id=Number(req.params.id);if(!Number.isInteger(id))return res.status(400).json({error:"Invalid product id."});
+  const {rows}=await pool.query("SELECT 1 FROM order_items WHERE product_id=$1 LIMIT 1",[id]);
+  if(rows[0])return res.status(409).json({error:"This product is linked to an order and cannot be deleted. Set stock to 0 instead."});
+  const result=await pool.query("DELETE FROM products WHERE id=$1",[id]);if(!result.rowCount)return res.status(404).json({error:"Product not found."});res.json({deleted:true});
+});
+app.get("/api/admin/orders",requireAuth,requireAdmin,async(_req,res)=>{
+  const {rows}=await pool.query("SELECT o.id,o.total_amount,o.status,o.created_at,u.name,u.email,COALESCE(json_agg(json_build_object('productId',p.id,'name',p.name,'quantity',oi.quantity,'price',p.price) ORDER BY p.name) FILTER (WHERE p.id IS NOT NULL),'[]') AS items FROM orders o JOIN users u ON u.id=o.user_id LEFT JOIN order_items oi ON oi.order_id=o.id LEFT JOIN products p ON p.id=oi.product_id GROUP BY o.id,u.name,u.email ORDER BY o.created_at DESC LIMIT 200");
+  res.json({orders:rows});
+});
+app.patch("/api/admin/orders/:id",requireAuth,requireAdmin,async(req,res)=>{
+  const id=Number(req.params.id),status=String(req.body?.status||"").trim().toLowerCase(),allowed=["pending","confirmed","packed","shipped","delivered","cancelled"];
+  if(!Number.isInteger(id)||!allowed.includes(status))return res.status(400).json({error:"Invalid order status."});
+  const client=await pool.connect();
+  try{
+    await client.query("BEGIN");
+    const current=await client.query("SELECT status FROM orders WHERE id=$1 FOR UPDATE",[id]);
+    if(!current.rows[0])throw Object.assign(new Error("Order not found."),{status:404});
+    if(current.rows[0].status==="cancelled"&&status!=="cancelled")throw Object.assign(new Error("Cancelled orders cannot be reopened."),{status:409});
+    if(status==="cancelled"&&current.rows[0].status!=="cancelled"){
+      const items=await client.query("SELECT product_id,quantity FROM order_items WHERE order_id=$1",[id]);
+      for(const item of items.rows)await client.query("UPDATE products SET stock=stock+$1 WHERE id=$2",[item.quantity,item.product_id]);
+    }
+    const updated=await client.query("UPDATE orders SET status=$1 WHERE id=$2 RETURNING id,total_amount,status,created_at",[status,id]);
+    await client.query("COMMIT");res.json({order:updated.rows[0]});
+  }catch(error){await client.query("ROLLBACK");console.error(error);res.status(error.status||500).json({error:error.message||"Unable to update order."});}
+  finally{client.release();}
+});
+app.get("/api/admin/contacts",requireAuth,requireAdmin,async(_req,res)=>{
+  const {rows}=await pool.query("SELECT id,user_id,message,created_at FROM contacts ORDER BY created_at DESC LIMIT 100");
+  res.json({contacts:rows});
+});
+
+
 app.post("/api/contact",requireAuth,async(req,res)=>{
   const name=String(req.body?.name||"").trim();
   const email=String(req.body?.email||"").trim().toLowerCase();
