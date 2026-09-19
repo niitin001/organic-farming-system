@@ -22,7 +22,7 @@ const pool = new Pool({
 
 const allowedOrigin = process.env.FRONTEND_URL || null;
 app.use(cors(allowedOrigin ? { origin: allowedOrigin, credentials: true } : { origin: false }));
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: false }));
 app.use((req,res,next)=>{
   const p=req.path.toLowerCase();
