@@ -98,6 +98,7 @@ async function initDatabase() {
     CREATE TABLE IF NOT EXISTS seller_orders (id SERIAL PRIMARY KEY,order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,seller_id INTEGER NOT NULL REFERENCES seller_profiles(id) ON DELETE CASCADE,status VARCHAR(30) NOT NULL DEFAULT 'pending',seller_total NUMERIC(10,2) NOT NULL DEFAULT 0,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE(order_id,seller_id));
     CREATE TABLE IF NOT EXISTS contacts (id SERIAL PRIMARY KEY,user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,message TEXT NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS saved_crops (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,crop_id INTEGER NOT NULL REFERENCES crops(id) ON DELETE CASCADE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE(user_id,crop_id));    CREATE TABLE IF NOT EXISTS farm_tasks (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,crop_name VARCHAR(120) NOT NULL,sowing_date DATE NOT NULL,task_title VARCHAR(180) NOT NULL,task_type VARCHAR(80) NOT NULL,due_date DATE NOT NULL,status VARCHAR(30) NOT NULL DEFAULT 'pending',created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+    CREATE TABLE IF NOT EXISTS product_reviews (id SERIAL PRIMARY KEY,product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,seller_order_id INTEGER NOT NULL REFERENCES seller_orders(id) ON DELETE CASCADE,rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),comment TEXT,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE(user_id,product_id,order_id));
   `);
   await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'farmer'");
   await pool.query("ALTER TABLE products ADD COLUMN IF NOT EXISTS seller_id INTEGER REFERENCES seller_profiles(id) ON DELETE SET NULL");
@@ -316,7 +317,7 @@ app.get("/api/products",async(req,res)=>{
   if(category){params.push(category);where.push("p.category=$"+params.length);}
   if(q){params.push("%"+q+"%");where.push("(p.name ILIKE $"+params.length+" OR p.category ILIKE $"+params.length+" OR COALESCE(sp.store_name,'') ILIKE $"+params.length+")");}
   if(city){params.push(city);where.push("COALESCE(sp.city,'') ILIKE $"+params.length);}
-  const sql="SELECT p.id,p.name,p.category,p.price,p.stock,p.image,COALESCE(sp.store_name,'KisanSetu Direct') AS seller_name,COALESCE(sp.city,'Platform') AS seller_city,CASE WHEN sp.status='approved' THEN true ELSE false END AS seller_verified FROM products p LEFT JOIN seller_profiles sp ON sp.id=p.seller_id WHERE "+where.join(" AND ")+" ORDER BY seller_verified DESC,p.id DESC";
+  const sql="SELECT p.id,p.name,p.category,p.price,p.stock,p.image,p.seller_id,COALESCE(sp.store_name,'KisanSetu Direct') AS seller_name,COALESCE(sp.city,'Platform') AS seller_city,CASE WHEN sp.status='approved' THEN true ELSE false END AS seller_verified,COALESCE(rv.review_count,0)::int AS review_count,COALESCE(rv.avg_rating,0)::numeric AS avg_rating FROM products p LEFT JOIN seller_profiles sp ON sp.id=p.seller_id LEFT JOIN (SELECT product_id,COUNT(*) AS review_count,ROUND(AVG(rating),1) AS avg_rating FROM product_reviews GROUP BY product_id) rv ON rv.product_id=p.id WHERE "+where.join(" AND ")+" ORDER BY seller_verified DESC,p.id DESC";
   const {rows}=await pool.query(sql,params); res.json({products:rows});
 });
 app.post("/api/seller/apply",requireAuth,async(req,res)=>{
@@ -470,6 +471,27 @@ app.patch("/api/admin/sellers/:id",requireAuth,requireAdmin,async(req,res)=>{
     for(const [sellerId,group] of sellerGroups){const sellerTotal=group.reduce((sum,item)=>sum+item.price*item.quantity,0);const so=await client.query("INSERT INTO seller_orders (order_id,seller_id,status,seller_total) VALUES ($1,$2,'pending',$3) RETURNING id",[order.rows[0].id,sellerId,sellerTotal]);for(const item of group)await client.query("UPDATE order_items SET seller_order_id=$1 WHERE order_id=$2 AND product_id=$3",[so.rows[0].id,order.rows[0].id,item.productId]);}
     await client.query("COMMIT");res.status(201).json({order:order.rows[0]});
   }catch(error){await client.query("ROLLBACK");console.error(error);res.status(error.status||500).json({error:error.message||"Unable to place order."});}finally{client.release();}
+});
+app.get("/api/products/:id/reviews",async(req,res)=>{
+  const id=Number(req.params.id); if(!Number.isInteger(id))return res.status(400).json({error:"Invalid product id."});
+  const {rows}=await pool.query("SELECT r.id,r.rating,r.comment,r.created_at,u.name AS reviewer FROM product_reviews r JOIN users u ON u.id=r.user_id WHERE r.product_id=$1 ORDER BY r.created_at DESC LIMIT 50",[id]);
+  const summary=await pool.query("SELECT COUNT(*)::int AS count,COALESCE(ROUND(AVG(rating),1),0)::numeric AS average FROM product_reviews WHERE product_id=$1",[id]);
+  res.json({reviews:rows,summary:{count:summary.rows[0].count,average:Number(summary.rows[0].average)}});
+});
+app.post("/api/products/:id/reviews",requireAuth,async(req,res)=>{
+  const productId=Number(req.params.id),rating=Number(req.body?.rating),comment=String(req.body?.comment||"").trim();
+  if(!Number.isInteger(productId)||!Number.isInteger(rating)||rating<1||rating>5)return res.status(400).json({error:"Rating must be between 1 and 5."});
+  if(comment.length>500)return res.status(400).json({error:"Review must be 500 characters or less."});
+  const {rows}=await pool.query(`SELECT oi.order_id,oi.seller_order_id
+    FROM order_items oi JOIN orders o ON o.id=oi.order_id
+    LEFT JOIN seller_orders so ON so.id=oi.seller_order_id
+    WHERE oi.product_id=$1 AND o.user_id=$2 AND COALESCE(so.status,o.status)='delivered'
+    ORDER BY o.created_at DESC LIMIT 1`,[productId,req.auth.id]);
+  if(!rows[0])return res.status(403).json({error:"You can review this product only after your order is delivered."});
+  try{
+    const review=await pool.query("INSERT INTO product_reviews (product_id,user_id,order_id,seller_order_id,rating,comment) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id,rating,comment,created_at",[productId,req.auth.id,rows[0].order_id,rows[0].seller_order_id,rating,comment||null]);
+    res.status(201).json({review:review.rows[0],message:"Review submitted."});
+  }catch(error){if(error.code==="23505")return res.status(409).json({error:"You have already reviewed this product from this order."});console.error(error);res.status(500).json({error:"Unable to submit review."});}
 });
 app.get("/api/orders",requireAuth,async(req,res)=>{
   const {rows}=await pool.query("SELECT o.id,o.total_amount,o.status,o.created_at,COALESCE(json_agg(json_build_object('productId',p.id,'name',p.name,'quantity',oi.quantity,'price',p.price,'seller',COALESCE(sp.store_name,'KisanSetu Direct'),'sellerStatus',COALESCE(so.status,'pending')) ORDER BY p.name) FILTER (WHERE p.id IS NOT NULL),'[]') AS items,COALESCE((SELECT json_agg(json_build_object('seller',sp2.store_name,'status',so2.status,'total',so2.seller_total) ORDER BY sp2.store_name) FROM seller_orders so2 JOIN seller_profiles sp2 ON sp2.id=so2.seller_id WHERE so2.order_id=o.id),'[]') AS seller_orders FROM orders o LEFT JOIN order_items oi ON oi.order_id=o.id LEFT JOIN products p ON p.id=oi.product_id LEFT JOIN seller_orders so ON so.id=oi.seller_order_id LEFT JOIN seller_profiles sp ON sp.id=p.seller_id WHERE o.user_id=$1 GROUP BY o.id ORDER BY o.created_at DESC",[req.auth.id]);
