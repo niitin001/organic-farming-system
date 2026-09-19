@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sell on KisanSetu</title><link rel="stylesheet" href="styles.css">
+<style>
+.wrap{max-width:900px;margin:110px auto 60px;padding:0 22px}.hero{background:linear-gradient(135deg,#0d3b2e,#2f7d42);color:#fff;border-radius:26px;padding:32px;margin-bottom:20px}.hero h1{margin:8px 0;font-size:clamp(2rem,5vw,3rem)}.panel{background:#fff;border:1px solid #dfe9e2;border-radius:20px;padding:24px;box-shadow:0 12px 30px rgba(0,0,0,.05)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.field{display:flex;flex-direction:column;gap:7px}.field.full{grid-column:1/-1}.field label{font-weight:800}.field input,.field textarea{padding:13px;border:1px solid #d7e3da;border-radius:11px;font:inherit}.field textarea{min-height:95px;resize:vertical}.submit{margin-top:18px;border:0;background:#1e6b37;color:#fff;padding:13px 18px;border-radius:11px;font-weight:900;cursor:pointer}.status{margin-top:14px;font-weight:700}.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0}.step{background:#f3f8f4;border:1px solid #dce9df;border-radius:15px;padding:15px}.step b{display:block;margin-bottom:5px}@media(max-width:650px){.grid,.steps{grid-template-columns:1fr}.field.full{grid-column:auto}}
+</style></head>
+<body>
+<nav class="navbar"><a href="index.html" class="brand">🌱 KisanSetu</a><div class="nav-links"><a href="marketplace.html">Marketplace</a><a href="dashboard.html">Dashboard</a></div></nav>
+<main class="wrap">
+<section class="hero"><span>🏪 SELL ON KISANSETU</span><h1>Bring your real shop online.</h1><p>Local seed, fertilizer, bio-input and farm-tool shops can apply. Your store is reviewed before products are shown to farmers.</p></section>
+<div class="steps"><div class="step"><b>1. Register</b>Submit your shop and contact details.</div><div class="step"><b>2. Verification</b>Admin reviews the application.</div><div class="step"><b>3. Sell</b>Add products, price and live stock.</div></div>
+<section class="panel" id="panel">
+<h2>Store application</h2><p>Use your actual business details. Do not submit a shop you do not represent.</p>
+<form id="form"><div class="grid">
+<div class="field"><label>Store name</label><input id="storeName" required placeholder="e.g. Patel Krishi Seva Kendra"></div>
+<div class="field"><label>Phone</label><input id="phone" required maxlength="10" placeholder="10-digit mobile"></div>
+<div class="field full"><label>Shop address</label><textarea id="address" required placeholder="Full shop address"></textarea></div>
+<div class="field"><label>City</label><input id="city" required placeholder="Bhopal"></div>
+<div class="field"><label>State</label><input id="state" required value="Madhya Pradesh"></div>
+<div class="field"><label>Pincode</label><input id="pincode" required maxlength="6" placeholder="462001"></div>
+</div><button class="submit">Submit for verification</button><div id="status" class="status"></div></form>
+</section>
+</main>
+<script>
+const token=localStorage.getItem("ffs_token");if(!token){location.href="login.html?next=seller.html";}
+const $=id=>document.getElementById(id);
+async function load(){const r=await fetch("/api/seller/me",{headers:{Authorization:"Bearer "+token}});if(!r.ok)return;const d=await r.json();if(d.seller){$("form").innerHTML="<h3>Application status: "+d.seller.status+"</h3><p><strong>"+d.seller.store_name+"</strong><br>"+d.seller.city+", "+d.seller.state+" — "+d.seller.pincode+"</p><p>"+(d.seller.status==="approved"?"Your seller account is approved. Open the seller dashboard to manage products.":"Your application is under review. Products will go live after approval.")+"</p>"+(d.seller.status==="approved"?"<a class='submit' style='display:inline-block;text-decoration:none' href='seller-dashboard.html'>Open Seller Dashboard</a>":"");}}
+$("form").addEventListener("submit",async e=>{e.preventDefault();$("status").textContent="Submitting…";const body={storeName:$("storeName").value.trim(),phone:$("phone").value.trim(),address:$("address").value.trim(),city:$("city").value.trim(),state:$("state").value.trim(),pincode:$("pincode").value.trim()};const r=await fetch("/api/seller/apply",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify(body)});const d=await r.json();$("status").textContent=d.message||d.error||"Unable to submit.";if(r.ok)load();});
+load();
+</script></body></html>
