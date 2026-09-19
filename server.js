@@ -314,9 +314,9 @@ app.get("/api/products",async(req,res)=>{
   const q=String(req.query.q||"").trim();
   const city=String(req.query.city||"").trim();
   const params=[]; const where=["(p.seller_id IS NULL OR sp.status='approved')"];
-  if(category){params.push(category);where.push("p.category="+params.length);}
-  if(q){params.push("%"+q+"%");where.push("(p.name ILIKE "+params.length+" OR p.category ILIKE "+params.length+" OR COALESCE(sp.store_name,'') ILIKE "+params.length+")");}
-  if(city){params.push(city);where.push("COALESCE(sp.city,'') ILIKE "+params.length);}
+  if(category){params.push(category);where.push("p.category=$"+params.length);}
+  if(q){params.push("%"+q+"%");where.push("(p.name ILIKE $"+params.length+" OR p.category ILIKE $"+params.length+" OR COALESCE(sp.store_name,'') ILIKE $"+params.length+")");}
+  if(city){params.push(city);where.push("COALESCE(sp.city,'') ILIKE $"+params.length);}
   const sql="SELECT p.id,p.name,p.category,p.price,p.stock,p.image,COALESCE(sp.store_name,'KisanSetu Direct') AS seller_name,COALESCE(sp.city,'Platform') AS seller_city,CASE WHEN sp.status='approved' THEN true ELSE false END AS seller_verified FROM products p LEFT JOIN seller_profiles sp ON sp.id=p.seller_id WHERE "+where.join(" AND ")+" ORDER BY seller_verified DESC,p.id DESC";
   const {rows}=await pool.query(sql,params); res.json({products:rows});
 });
