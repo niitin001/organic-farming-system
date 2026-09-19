@@ -91,7 +91,8 @@ async function initDatabase() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY,name VARCHAR(120) NOT NULL,email VARCHAR(255) UNIQUE NOT NULL,password_hash TEXT NOT NULL,role VARCHAR(20) NOT NULL DEFAULT 'farmer',created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS crops (id SERIAL PRIMARY KEY,name VARCHAR(120) UNIQUE NOT NULL,season VARCHAR(120),soil_type VARCHAR(200),duration VARCHAR(80),water_requirement VARCHAR(80),description TEXT);
-    CREATE TABLE IF NOT EXISTS products (id SERIAL PRIMARY KEY,name VARCHAR(160) NOT NULL,category VARCHAR(80),price NUMERIC(10,2) NOT NULL DEFAULT 0,stock INTEGER NOT NULL DEFAULT 0,image TEXT);
+    CREATE TABLE IF NOT EXISTS seller_profiles (id SERIAL PRIMARY KEY,user_id INTEGER UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,store_name VARCHAR(160) NOT NULL,phone VARCHAR(20) NOT NULL,address TEXT NOT NULL,city VARCHAR(100) NOT NULL,state VARCHAR(100) NOT NULL,pincode VARCHAR(10) NOT NULL,status VARCHAR(20) NOT NULL DEFAULT 'pending',verified_at TIMESTAMPTZ,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+    CREATE TABLE IF NOT EXISTS products (id SERIAL PRIMARY KEY,name VARCHAR(160) NOT NULL,category VARCHAR(80),price NUMERIC(10,2) NOT NULL DEFAULT 0,stock INTEGER NOT NULL DEFAULT 0,image TEXT,seller_id INTEGER REFERENCES seller_profiles(id) ON DELETE SET NULL);
     CREATE TABLE IF NOT EXISTS orders (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,total_amount NUMERIC(10,2) NOT NULL DEFAULT 0,status VARCHAR(40) NOT NULL DEFAULT 'pending',created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS order_items (id SERIAL PRIMARY KEY,order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,product_id INTEGER NOT NULL REFERENCES products(id),quantity INTEGER NOT NULL CHECK (quantity > 0));
     CREATE TABLE IF NOT EXISTS contacts (id SERIAL PRIMARY KEY,user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,message TEXT NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
@@ -99,6 +100,7 @@ async function initDatabase() {
     CREATE TABLE IF NOT EXISTS farm_tasks (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,crop_name VARCHAR(120) NOT NULL,sowing_date DATE NOT NULL,task_title VARCHAR(180) NOT NULL,task_type VARCHAR(80) NOT NULL,due_date DATE NOT NULL,status VARCHAR(30) NOT NULL DEFAULT 'pending',created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
   `);
   await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'farmer'");
+  await pool.query("ALTER TABLE products ADD COLUMN IF NOT EXISTS seller_id INTEGER REFERENCES seller_profiles(id) ON DELETE SET NULL");
   if(process.env.ADMIN_EMAIL){await pool.query("UPDATE users SET role='admin' WHERE lower(email)=lower($1)",[String(process.env.ADMIN_EMAIL).trim()]);}
   await pool.query("DELETE FROM crops a USING crops b WHERE a.name = b.name AND a.id > b.id");
   await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS crops_name_unique ON crops(name)");
@@ -310,13 +312,68 @@ const marketplaceProducts = [
 app.get("/api/products",async(req,res)=>{
   const category=String(req.query.category||"").trim();
   const q=String(req.query.q||"").trim();
-  const params=[]; const where=[];
-  if(category){params.push(category);where.push(`category=${params.length}`);}
-  if(q){params.push(`%${q}%`);where.push(`(name ILIKE ${params.length} OR category ILIKE ${params.length})`);}
-  const sql="SELECT id,name,category,price,stock,image FROM products "+(where.length?"WHERE "+where.join(" AND "):"")+" ORDER BY id";
+  const city=String(req.query.city||"").trim();
+  const params=[]; const where=["(p.seller_id IS NULL OR sp.status='approved')"];
+  if(category){params.push(category);where.push("p.category="+params.length);}
+  if(q){params.push("%"+q+"%");where.push("(p.name ILIKE "+params.length+" OR p.category ILIKE "+params.length+" OR COALESCE(sp.store_name,'') ILIKE "+params.length+")");}
+  if(city){params.push(city);where.push("COALESCE(sp.city,'') ILIKE "+params.length);}
+  const sql="SELECT p.id,p.name,p.category,p.price,p.stock,p.image,COALESCE(sp.store_name,'KisanSetu Direct') AS seller_name,COALESCE(sp.city,'Platform') AS seller_city,CASE WHEN sp.status='approved' THEN true ELSE false END AS seller_verified FROM products p LEFT JOIN seller_profiles sp ON sp.id=p.seller_id WHERE "+where.join(" AND ")+" ORDER BY seller_verified DESC,p.id DESC";
   const {rows}=await pool.query(sql,params); res.json({products:rows});
 });
-
+app.post("/api/seller/apply",requireAuth,async(req,res)=>{
+  const storeName=String(req.body?.storeName||"").trim(),phone=String(req.body?.phone||"").trim(),address=String(req.body?.address||"").trim(),city=String(req.body?.city||"").trim(),state=String(req.body?.state||"").trim(),pincode=String(req.body?.pincode||"").trim();
+  if(!storeName||!phone||!address||!city||!state||!/^[0-9]{6}$/.test(pincode)) return res.status(400).json({error:"Store name, phone, address, city, state and 6-digit pincode are required."});
+  const existing=await pool.query("SELECT id,status FROM seller_profiles WHERE user_id=$1",[req.auth.id]);
+  if(existing.rows[0]) return res.status(409).json({error:"Seller application already exists with status: "+existing.rows[0].status+"."});
+  const {rows}=await pool.query("INSERT INTO seller_profiles (user_id,store_name,phone,address,city,state,pincode) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id,store_name,status,city,state,pincode,created_at",[req.auth.id,storeName,phone,address,city,state,pincode]);
+  res.status(201).json({seller:rows[0],message:"Application submitted. Products become visible after admin verification."});
+});
+app.get("/api/seller/me",requireAuth,async(req,res)=>{
+  const {rows}=await pool.query("SELECT id,store_name,phone,address,city,state,pincode,status,verified_at,created_at FROM seller_profiles WHERE user_id=$1",[req.auth.id]);
+  res.json({seller:rows[0]||null});
+});
+async function requireSeller(req,res,next){
+  try{
+    const {rows}=await pool.query("SELECT sp.id,sp.status FROM seller_profiles sp WHERE sp.user_id=$1",[req.auth.id]);
+    if(!rows[0]||rows[0].status!=="approved") return res.status(403).json({error:"Approved seller account required."});
+    req.seller=rows[0]; next();
+  }catch(error){console.error(error);res.status(500).json({error:"Unable to verify seller access."});}
+}
+app.get("/api/seller/products",requireAuth,requireSeller,async(req,res)=>{
+  const {rows}=await pool.query("SELECT id,name,category,price,stock,image FROM products WHERE seller_id=$1 ORDER BY id DESC",[req.seller.id]);
+  res.json({products:rows});
+});
+app.post("/api/seller/products",requireAuth,requireSeller,async(req,res)=>{
+  const name=String(req.body?.name||"").trim(),category=String(req.body?.category||"").trim(),price=Number(req.body?.price),stock=Number(req.body?.stock),image=String(req.body?.image||"").trim();
+  if(!name||!category||!Number.isFinite(price)||price<0||!Number.isInteger(stock)||stock<0) return res.status(400).json({error:"Enter valid product details."});
+  const {rows}=await pool.query("INSERT INTO products (name,category,price,stock,image,seller_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *",[name,category,price,stock,image,req.seller.id]);
+  res.status(201).json({product:rows[0]});
+});
+app.patch("/api/seller/products/:id",requireAuth,requireSeller,async(req,res)=>{
+  const id=Number(req.params.id),name=String(req.body?.name||"").trim(),category=String(req.body?.category||"").trim(),price=Number(req.body?.price),stock=Number(req.body?.stock),image=String(req.body?.image||"").trim();
+  if(!Number.isInteger(id)||!name||!category||!Number.isFinite(price)||price<0||!Number.isInteger(stock)||stock<0)return res.status(400).json({error:"Enter valid product details."});
+  const {rows}=await pool.query("UPDATE products SET name=$1,category=$2,price=$3,stock=$4,image=$5 WHERE id=$6 AND seller_id=$7 RETURNING *",[name,category,price,stock,image,id,req.seller.id]);
+  if(!rows[0])return res.status(404).json({error:"Seller product not found."});
+  res.json({product:rows[0]});
+});
+app.delete("/api/seller/products/:id",requireAuth,requireSeller,async(req,res)=>{
+  const id=Number(req.params.id); if(!Number.isInteger(id))return res.status(400).json({error:"Invalid product id."});
+  const result=await pool.query("DELETE FROM products WHERE id=$1 AND seller_id=$2 AND NOT EXISTS (SELECT 1 FROM order_items WHERE product_id=$1)",[id,req.seller.id]);
+  if(!result.rowCount)return res.status(409).json({error:"Product cannot be removed after it has been ordered. Set stock to 0 instead."});
+  res.json({deleted:true});
+});
+app.get("/api/admin/sellers",requireAuth,requireAdmin,async(_req,res)=>{
+  const {rows}=await pool.query("SELECT sp.id,sp.user_id,sp.store_name,sp.phone,sp.address,sp.city,sp.state,sp.pincode,sp.status,sp.verified_at,sp.created_at,u.name,u.email FROM seller_profiles sp JOIN users u ON u.id=sp.user_id ORDER BY sp.created_at DESC");
+  res.json({sellers:rows});
+});
+app.patch("/api/admin/sellers/:id",requireAuth,requireAdmin,async(req,res)=>{
+  const id=Number(req.params.id),status=String(req.body?.status||"").trim().toLowerCase();
+  if(!Number.isInteger(id)||!["pending","approved","rejected"].includes(status))return res.status(400).json({error:"Invalid seller status."});
+  const {rows}=await pool.query("UPDATE seller_profiles SET status=$1,verified_at=CASE WHEN $1=$3 THEN NOW() ELSE NULL END WHERE id=$2 RETURNING *",[status,id,"approved"]);
+  if(!rows[0])return res.status(404).json({error:"Seller application not found."});
+  await pool.query("UPDATE users SET role=CASE WHEN $1=$3 THEN $4 ELSE $5 END WHERE id=$2 AND role<>$6",[status,rows[0].user_id,"approved","seller","farmer","admin"]);
+  res.json({seller:rows[0]});
+});
 app.post("/api/orders",requireAuth,async(req,res)=>{
   const items=Array.isArray(req.body?.items)?req.body.items:[];
   const clean=items.map(i=>({productId:Number(i.productId),quantity:Number(i.quantity)})).filter(i=>Number.isInteger(i.productId)&&Number.isInteger(i.quantity)&&i.quantity>0);
@@ -365,7 +422,7 @@ app.get("/api/admin/users",requireAuth,requireAdmin,async(_req,res)=>{
   res.json({users:rows});
 });
 app.get("/api/admin/products",requireAuth,requireAdmin,async(_req,res)=>{
-  const {rows}=await pool.query("SELECT id,name,category,price,stock,image FROM products ORDER BY id");
+  const {rows}=await pool.query("SELECT p.id,p.name,p.category,p.price,p.stock,p.image,p.seller_id,COALESCE(sp.store_name,'KisanSetu Direct') AS seller_name,COALESCE(sp.city,'Platform') AS seller_city,COALESCE(sp.status,'platform') AS seller_status FROM products p LEFT JOIN seller_profiles sp ON sp.id=p.seller_id ORDER BY p.id");
   res.json({products:rows});
 });
 app.post("/api/admin/products",requireAuth,requireAdmin,async(req,res)=>{
