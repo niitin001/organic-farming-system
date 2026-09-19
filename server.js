@@ -334,6 +334,19 @@ app.get("/api/seller/me",requireAuth,async(req,res)=>{
   const {rows}=await pool.query("SELECT id,store_name,phone,address,city,state,pincode,status,verified_at,created_at FROM seller_profiles WHERE user_id=$1",[req.auth.id]);
   res.json({seller:rows[0]||null});
 });
+async function syncOrderStatus(client,orderId){
+  const {rows}=await client.query("SELECT status FROM seller_orders WHERE order_id=$1",[orderId]);
+  if(!rows.length)return;
+  const statuses=rows.map(r=>r.status);
+  let status="pending";
+  if(statuses.every(s=>s==="cancelled")) status="cancelled";
+  else if(statuses.every(s=>s==="delivered"||s==="cancelled") && statuses.some(s=>s==="delivered")) status="delivered";
+  else if(statuses.some(s=>s==="shipped")) status="shipped";
+  else if(statuses.some(s=>s==="packed")) status="packed";
+  else if(statuses.some(s=>s==="confirmed")) status="confirmed";
+  await client.query("UPDATE orders SET status=$1 WHERE id=$2",[status,orderId]);
+}
+
 async function requireSeller(req,res,next){
   try{
     const {rows}=await pool.query("SELECT sp.id,sp.status FROM seller_profiles sp WHERE sp.user_id=$1",[req.auth.id]);
@@ -418,7 +431,7 @@ app.patch("/api/seller/orders/:id",requireAuth,requireSeller,async(req,res)=>{
   const id=Number(req.params.id),status=String(req.body?.status||"").trim().toLowerCase(),allowed=["pending","confirmed","packed","shipped","delivered","cancelled"];
   if(!Number.isInteger(id)||!allowed.includes(status))return res.status(400).json({error:"Invalid seller order status."});
   const client=await pool.connect();
-  try{await client.query("BEGIN");const current=await client.query("SELECT id,status FROM seller_orders WHERE id=$1 AND seller_id=$2 FOR UPDATE",[id,req.seller.id]);if(!current.rows[0])throw Object.assign(new Error("Seller order not found."),{status:404});if(current.rows[0].status==="cancelled"&&status!=="cancelled")throw Object.assign(new Error("Cancelled seller orders cannot be reopened."),{status:409});if(status==="cancelled"&&current.rows[0].status!=="cancelled"){const items=await client.query("SELECT product_id,quantity FROM order_items WHERE seller_order_id=$1",[id]);for(const item of items.rows)await client.query("UPDATE products SET stock=stock+$1 WHERE id=$2",[item.quantity,item.product_id]);}const updated=await client.query("UPDATE seller_orders SET status=$1 WHERE id=$2 RETURNING id,order_id,status,seller_total,created_at",[status,id]);await client.query("COMMIT");res.json({order:updated.rows[0]});}
+  try{await client.query("BEGIN");const current=await client.query("SELECT id,status FROM seller_orders WHERE id=$1 AND seller_id=$2 FOR UPDATE",[id,req.seller.id]);if(!current.rows[0])throw Object.assign(new Error("Seller order not found."),{status:404});if(current.rows[0].status==="cancelled"&&status!=="cancelled")throw Object.assign(new Error("Cancelled seller orders cannot be reopened."),{status:409});if(status==="cancelled"&&current.rows[0].status!=="cancelled"){const items=await client.query("SELECT product_id,quantity FROM order_items WHERE seller_order_id=$1",[id]);for(const item of items.rows)await client.query("UPDATE products SET stock=stock+$1 WHERE id=$2",[item.quantity,item.product_id]);}const updated=await client.query("UPDATE seller_orders SET status=$1 WHERE id=$2 RETURNING id,order_id,status,seller_total,created_at",[status,id]);await syncOrderStatus(client,updated.rows[0].order_id);await client.query("COMMIT");res.json({order:updated.rows[0]});}
   catch(error){await client.query("ROLLBACK");console.error(error);res.status(error.status||500).json({error:error.message||"Unable to update seller order."});}finally{client.release();}
 });
 
@@ -476,7 +489,7 @@ app.patch("/api/admin/orders/:id",requireAuth,requireAdmin,async(req,res)=>{
       const items=await client.query("SELECT oi.product_id,oi.quantity FROM order_items oi LEFT JOIN seller_orders so ON so.id=oi.seller_order_id WHERE oi.order_id=$1 AND COALESCE(so.status,'pending')<>'cancelled'",[id]);
       for(const item of items.rows)await client.query("UPDATE products SET stock=stock+$1 WHERE id=$2",[item.quantity,item.product_id]);
     }
-    const updated=await client.query("UPDATE orders SET status=$1 WHERE id=$2 RETURNING id,total_amount,status,created_at",[status,id]);
+    const updated=await client.query("UPDATE orders SET status=$1 WHERE id=$2 RETURNING id,total_amount,status,created_at",[status,id]);if(status==="cancelled")await client.query("UPDATE seller_orders SET status='cancelled' WHERE order_id=$1 AND status<>'cancelled'",[id]);
     await client.query("COMMIT");res.json({order:updated.rows[0]});
   }catch(error){await client.query("ROLLBACK");console.error(error);res.status(error.status||500).json({error:error.message||"Unable to update order."});}
   finally{client.release();}
