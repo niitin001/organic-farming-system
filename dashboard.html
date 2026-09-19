@@ -19,7 +19,7 @@ body{padding-top:86px}.dash{padding:55px 0 80px}.dash-head{display:flex;justify-
 <a class="action" href="crop-recommendation.html"><span>🌾</span><b>Smart Crop Recommendation</b><p>Match season, soil and water with suitable crops.</p></a>
 <a class="action" href="weather.html"><span>🌦️</span><b>Live Weather</b><p>Check current conditions before planning field work.</p></a>
 <a class="action" href="soil.html"><span>🌱</span><b>Soil Insights</b><p>Explore soil types and crop compatibility.</p></a>
-<a class="action" href="farm-planner.html"><span>📅</span><b>Farm Activity Planner</b><p>Build a crop timeline and track field tasks.</p></a>\n<a class="action" href="crop-guide.html"><span>📖</span><b>Crop Guide</b><p>Review crop duration, season and growing information.</p></a>
+<a class="action" href="farm-planner.html"><span>📅</span><b>Farm Activity Planner</b><p>Build a crop timeline and track field tasks.</p></a><a class="action" href="crop-guide.html"><span>📖</span><b>Crop Guide</b><p>Review crop duration, season and growing information.</p></a>
 <a class="action" href="crop-detail.html?name=Rice"><span>🔍</span><b>Crop Detail Dashboard</b><p>Explore a focused growing profile for each supported crop.</p></a>
 </div></section>
 <aside class="panel"><h2>Your workspace</h2><p>Your saved crop shortlist is stored in PostgreSQL.</p><div class="stat-list"><div class="stat"><span>Saved crops</span><strong id="savedCount">0</strong></div><div class="stat"><span>Farm planner</span><strong><a href="farm-planner.html">Open</a></strong></div><div class="stat"><span>Orders</span><strong id="orderCount">0</strong></div></div><div id="savedList" class="saved-list"><div class="empty">No saved crops yet. Save one from Smart Crop Recommendation.</div></div><div class="tip">🌿 <strong>Tip:</strong> Save crops that fit your conditions so you can compare them later.</div></aside>
@@ -45,9 +45,19 @@ document.getElementById("logout").onclick=()=>{localStorage.removeItem("ffs_toke
 loadDashboard();loadOrderCount();
 </script>
 <script>
+function money(n){return "₹"+Number(n||0).toLocaleString("en-IN",{maximumFractionDigits:2});}
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));}
 async function loadOrders(){
  const box=document.getElementById("orders"); if(!box)return; const token=localStorage.getItem("ffs_token"); if(!token){box.textContent="Login to view your orders.";return;}
- try{const r=await fetch("/api/orders",{headers:{Authorization:"Bearer "+token}});const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to load orders");
- box.innerHTML=d.orders.length?d.orders.slice(0,5).map(o=>"<div style='padding:18px 0;border-bottom:1px solid #edf1ee'><div style='display:flex;justify-content:space-between;gap:12px'><strong>Order #"+o.id+"</strong><strong>"+money(o.total_amount)+"</strong></div>"+(o.seller_orders||[]).map(s=>"<div style='margin-top:14px'><div style='display:flex;justify-content:space-between;gap:10px;font-size:.9rem'><strong>"+esc(s.seller)+"</strong><span>"+esc(s.status)+"</span></div><div style='display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:10px'>"+["pending","confirmed","packed","shipped","delivered","cancelled"].map((st,i)=>"<div style='height:6px;border-radius:99px;background:'"+(s.status===st||(["confirmed","packed","shipped","delivered"].indexOf(s.status)>=i&&st!=="cancelled")?"#2d7a46":"#e5ebe6")+"'></div>").join("")+"</div></div>").join("")+"</div>").join(""):"No orders yet. Start with the marketplace.";
- }catch(e){box.textContent=e.message;}}
->
+ try{
+  const r=await fetch("/api/orders",{headers:{Authorization:"Bearer "+token}});const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to load orders");
+  const steps=["pending","confirmed","packed","shipped","delivered"];
+  box.innerHTML=d.orders.length?d.orders.slice(0,5).map(o=>"<div style='padding:18px 0;border-bottom:1px solid #edf1ee'><div style='display:flex;justify-content:space-between;gap:12px'><strong>Order #"+o.id+"</strong><strong>"+money(o.total_amount)+"</strong></div>"+(o.seller_orders||[]).map(s=>{
+    const current=steps.indexOf(s.status);
+    const progress=s.status==="cancelled"?-1:current;
+    return "<div style='margin-top:14px'><div style='display:flex;justify-content:space-between;gap:10px;font-size:.9rem'><strong>"+esc(s.seller)+"</strong><span style='text-transform:capitalize'>"+esc(s.status)+"</span></div><div style='display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:10px'>"+steps.map((st,i)=>"<div title='"+st+"' style='height:7px;border-radius:99px;background:"+(progress>=i?"#2d7a46":"#e5ebe6")+"'></div>").join("")+"</div><div style='display:flex;justify-content:space-between;font-size:.68rem;color:#68756d;margin-top:5px'><span>Confirmed</span><span>Delivered</span></div></div>";
+  }).join("")+"</div>").join(""):"No orders yet. Start with the marketplace.";
+ }catch(e){box.textContent=e.message;}
+}
+loadOrders();
+</script>
