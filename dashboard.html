@@ -23,7 +23,7 @@ body{padding-top:86px}.dash{padding:55px 0 80px}.dash-head{display:flex;justify-
 <a class="action" href="crop-detail.html?name=Rice"><span>🔍</span><b>Crop Detail Dashboard</b><p>Explore a focused growing profile for each supported crop.</p></a>
 </div></section>
 <aside class="panel"><h2>Your workspace</h2><p>Your saved crop shortlist is stored in PostgreSQL.</p><div class="stat-list"><div class="stat"><span>Saved crops</span><strong id="savedCount">0</strong></div><div class="stat"><span>Farm planner</span><strong><a href="farm-planner.html">Open</a></strong></div><div class="stat"><span>Orders</span><strong id="orderCount">0</strong></div></div><div id="savedList" class="saved-list"><div class="empty">No saved crops yet. Save one from Smart Crop Recommendation.</div></div><div class="tip">🌿 <strong>Tip:</strong> Save crops that fit your conditions so you can compare them later.</div></aside>
-</div></div><section id="order-history" style="margin-top:24px"><div style="background:#fff;border:1px solid #e5ece7;border-radius:20px;padding:22px"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div><h2 style="margin:0">🛍️ Recent Orders</h2><p style="margin:6px 0;color:#68756d">Your marketplace orders and current status.</p></div><a href="marketplace.html" class="quick-link">Shop now →</a></div><div id="orders" style="margin-top:14px">Loading orders…</div></div></section></main>
+</div></div><section id="order-history" style="margin-top:24px"><div style="background:#fff;border:1px solid #e5ece7;border-radius:20px;padding:22px"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div><h2 style="margin:0">🛍️ Order Tracking</h2><p style="margin:6px 0;color:#68756d">Follow each seller's progress from confirmation to delivery.</p></div><a href="marketplace.html" class="quick-link">Shop now →</a></div><div id="orders" style="margin-top:18px">Loading orders…</div></div></section></main>
 <script>
 (function(){const dict={hi:{marketplace:"मार्केटप्लेस",home:"होम",dashboard:"डैशबोर्ड",weather:"मौसम"}};function setLang(l){localStorage.setItem("ffs_lang",l);document.querySelectorAll("[data-i18n]").forEach(e=>{const k=e.dataset.i18n;if(l==="hi"&&dict.hi[k])e.textContent=dict.hi[k];});document.querySelectorAll("[data-lang]").forEach(b=>b.classList.toggle("active",b.dataset.lang===l));}document.querySelectorAll("[data-lang]").forEach(b=>b.onclick=()=>setLang(b.dataset.lang));setLang(localStorage.getItem("ffs_lang")||"en");})();
 </script><script>
@@ -46,14 +46,8 @@ loadDashboard();loadOrderCount();
 </script>
 <script>
 async function loadOrders(){
- const box=document.getElementById("orders"); if(!box)return;
- const token=localStorage.getItem("ffs_token"); if(!token){box.textContent="Login to view your orders.";return;}
- try{const r=await fetch("/api/orders",{headers:{Authorization:"Bearer "+token}});const d=await r.json();
- if(!r.ok)throw new Error(d.error||"Unable to load orders");
- box.innerHTML=d.orders.length?d.orders.slice(0,5).map(o=>"<div style='padding:14px 0;border-bottom:1px solid #edf1ee'><strong>Order #"+o.id+"</strong> · "+esc(o.status)+" · "+money(o.total_amount)+"<div style='font-size:.86rem;color:#6b766f;margin-top:5px'>"+o.items.map(i=>esc(i.name)+" × "+i.quantity+" · "+esc(i.seller||"KisanSetu Direct")+" · "+esc(i.sellerStatus||o.status)).join(", ")+"</div></div>").join(""):"No orders yet. Start with the marketplace.";
- }catch(e){box.textContent=e.message;}
-}
-function money(n){return "₹"+Number(n).toLocaleString("en-IN",{maximumFractionDigits:2});}
-function esc(v){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));}
-loadOrders();
-</script></body></html>
+ const box=document.getElementById("orders"); if(!box)return; const token=localStorage.getItem("ffs_token"); if(!token){box.textContent="Login to view your orders.";return;}
+ try{const r=await fetch("/api/orders",{headers:{Authorization:"Bearer "+token}});const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to load orders");
+ box.innerHTML=d.orders.length?d.orders.slice(0,5).map(o=>"<div style='padding:18px 0;border-bottom:1px solid #edf1ee'><div style='display:flex;justify-content:space-between;gap:12px'><strong>Order #"+o.id+"</strong><strong>"+money(o.total_amount)+"</strong></div>"+(o.seller_orders||[]).map(s=>"<div style='margin-top:14px'><div style='display:flex;justify-content:space-between;gap:10px;font-size:.9rem'><strong>"+esc(s.seller)+"</strong><span>"+esc(s.status)+"</span></div><div style='display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:10px'>"+["pending","confirmed","packed","shipped","delivered","cancelled"].map((st,i)=>"<div style='height:6px;border-radius:99px;background:'"+(s.status===st||(["confirmed","packed","shipped","delivered"].indexOf(s.status)>=i&&st!=="cancelled")?"#2d7a46":"#e5ebe6")+"'></div>").join("")+"</div></div>").join("")+"</div>").join(""):"No orders yet. Start with the marketplace.";
+ }catch(e){box.textContent=e.message;}}
+>
