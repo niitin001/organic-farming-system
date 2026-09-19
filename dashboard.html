@@ -50,7 +50,7 @@ async function loadOrders(){
  const token=localStorage.getItem("ffs_token"); if(!token){box.textContent="Login to view your orders.";return;}
  try{const r=await fetch("/api/orders",{headers:{Authorization:"Bearer "+token}});const d=await r.json();
  if(!r.ok)throw new Error(d.error||"Unable to load orders");
- box.innerHTML=d.orders.length?d.orders.slice(0,5).map(o=>"<div style='padding:14px 0;border-bottom:1px solid #edf1ee'><strong>Order #"+o.id+"</strong> · "+esc(o.status)+" · "+money(o.total_amount)+"<div style='font-size:.86rem;color:#6b766f;margin-top:5px'>"+o.items.map(i=>esc(i.name)+" × "+i.quantity).join(", ")+"</div></div>").join(""):"No orders yet. Start with the marketplace.";
+ box.innerHTML=d.orders.length?d.orders.slice(0,5).map(o=>"<div style='padding:14px 0;border-bottom:1px solid #edf1ee'><strong>Order #"+o.id+"</strong> · "+esc(o.status)+" · "+money(o.total_amount)+"<div style='font-size:.86rem;color:#6b766f;margin-top:5px'>"+o.items.map(i=>esc(i.name)+" × "+i.quantity+" · "+esc(i.seller||"KisanSetu Direct")+" · "+esc(i.sellerStatus||o.status)).join(", ")+"</div></div>").join(""):"No orders yet. Start with the marketplace.";
  }catch(e){box.textContent=e.message;}
 }
 function money(n){return "₹"+Number(n).toLocaleString("en-IN",{maximumFractionDigits:2});}
