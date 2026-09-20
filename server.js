@@ -628,7 +628,7 @@ app.post("/api/crop-image-analysis",async(req,res)=>{
     if(!apiKey)return res.status(503).json({error:"Image analysis is not configured yet. Add OPENAI_API_KEY in the server environment."});
     const imageData=String(req.body?.imageData||"").trim();
     const question=String(req.body?.question||"").trim().slice(0,1000);
-    const match=imageData.match(/^data:(image\\/(?:jpeg|png|webp));base64,(.+)$/i);
+    const match=imageData.match(/^data:(image\/(?:jpeg|png|webp));base64,(.+)$/i);
     if(!match)return res.status(400).json({error:"Upload a JPG, PNG or WEBP crop photo."});
     const buffer=Buffer.from(match[2],"base64");
     if(buffer.length>5*1024*1024)return res.status(413).json({error:"Image is too large. Maximum size is 5 MB."});
