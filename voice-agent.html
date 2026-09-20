@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Farmer Friendly Voice Guide — ask farming questions by voice in Hindi, Hinglish or English.">
+<title>AI Voice Farmer Guide | Farmer Friendly</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+:root{--green:#1f7a45;--dark:#12301d;--soft:#eef8f0}
+body{background:#f7faf7;color:#17351f;font-family:Arial,sans-serif}
+.voice-page{max-width:1000px;margin:0 auto;padding:32px 20px 80px}
+.voice-hero{background:linear-gradient(135deg,#10351c,#2c8750);color:#fff;border-radius:28px;padding:42px 32px;box-shadow:0 18px 50px rgba(22,74,40,.18)}
+.voice-hero h1{font-size:clamp(32px,6vw,58px);margin:10px 0}.voice-hero p{max-width:700px;line-height:1.7;opacity:.92}
+.langs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.lang{border:1px solid rgba(255,255,255,.3);padding:8px 12px;border-radius:999px;font-size:13px}
+.voice-card{background:#fff;border-radius:24px;margin-top:22px;padding:24px;box-shadow:0 10px 35px rgba(20,60,30,.08)}
+.controls{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+button,.link-btn{border:0;border-radius:14px;padding:14px 18px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+#listen{background:var(--green);color:#fff;font-size:18px;padding:17px 24px}#listen.active{background:#c0392b}
+.secondary{background:var(--soft);color:var(--dark)}select{padding:13px;border:1px solid #d8e5db;border-radius:12px;background:#fff}
+.status{margin:18px 0;padding:14px;border-radius:14px;background:var(--soft);font-weight:600}
+.chat{display:flex;flex-direction:column;gap:12px;max-height:480px;overflow:auto;margin-top:20px}.bubble{max-width:82%;padding:14px 16px;border-radius:18px;line-height:1.55;white-space:pre-wrap}.user{align-self:flex-end;background:#dff3e5}.assistant{align-self:flex-start;background:#f1f4f1}
+.manual{display:flex;gap:10px;margin-top:18px}.manual input{flex:1;padding:15px;border:1px solid #d7e3d9;border-radius:14px;font-size:16px}
+.examples{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:16px}.example{text-align:left;background:#f6faf6;border:1px solid #e0ebe2;color:#23482e}
+.notice{font-size:13px;color:#617166;line-height:1.6}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="header-inner"><a class="brand" href="index.html"><span class="brand-mark">🌱</span><span><strong>Farmer</strong> Friendly</span></a><nav class="main-nav"><a href="index.html">Home</a><a href="crop-guide.html">Crop Guide</a><a href="weather.html">Weather</a><a href="purchase.html">Marketplace</a><a href="voice-agent.html" class="active">Voice Guide</a><a href="contact.html">Contact</a></nav></div></header>
+
+<main class="voice-page">
+<section class="voice-hero">
+<div>🎙️ FARMER FRIENDLY VOICE GUIDE</div>
+<h1>Ask. Speak. Get practical farming guidance.</h1>
+<p>Talk naturally in Hindi, Hinglish or English. The guide can help with crop selection, soil, irrigation, weather, crop diseases and common farm questions.</p>
+<div class="langs"><span class="lang">🇮🇳 Hindi</span><span class="lang">🗣️ Hinglish</span><span class="lang">🌍 English</span></div>
+</section>
+
+<section class="voice-card">
+<div class="controls">
+<button id="listen">🎙️ Start Speaking</button>
+<select id="language" aria-label="Voice language"><option value="hi-IN">Hindi / Hinglish</option><option value="en-IN">English India</option><option value="en-US">English US</option></select>
+<button class="secondary" id="speakLast">🔊 Repeat Answer</button>
+<a class="link-btn secondary" href="crop-guide.html">🌾 Crop Guide</a>
+</div>
+<div class="status" id="status">Ready. Press Start Speaking and ask your farming question.</div>
+<div class="chat" id="chat"></div>
+<div class="manual"><input id="manualInput" placeholder="Type your farming question if voice is unavailable"><button id="send" class="secondary">Send</button></div>
+<div class="examples">
+<button class="example">मेरी गेहूं की फसल में पीले पत्ते हो रहे हैं</button>
+<button class="example">Which crop is suitable for black soil?</button>
+<button class="example">मेरी फसल को कितनी सिंचाई चाहिए?</button>
+<button class="example">आज मौसम खेती के लिए कैसा है?</button>
+</div>
+<p class="notice">Important: this is a farming information assistant, not a replacement for a local agricultural officer, soil laboratory or plant-disease expert. For severe crop loss, pesticide dosage, poisoning, or uncertain disease diagnosis, verify advice locally before acting.</p>
+</section>
+</main>
+
+<script>
+const listen=document.getElementById('listen'), language=document.getElementById('language'), status=document.getElementById('status'), chat=document.getElementById('chat'), manual=document.getElementById('manualInput');
+const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+let recognition=null,lastAnswer='';
+function addBubble(text,type){const el=document.createElement('div');el.className='bubble '+type;el.textContent=text;chat.appendChild(el);chat.scrollTop=chat.scrollHeight}
+function speak(text){lastAnswer=text;if(!('speechSynthesis' in window))return;window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang=language.value==='hi-IN'?'hi-IN':'en-IN';u.rate=.94;window.speechSynthesis.speak(u)}
+function setStatus(t){status.textContent=t}
+function normalize(s){return s.toLowerCase().replace(/[?!.]/g,'').trim()}
+async function getWeather(city){const r=await fetch('/api/weather?city='+encodeURIComponent(city));if(!r.ok)throw new Error('Weather unavailable');return r.json()}
+async function answer(q){
+ const text=normalize(q);
+ addBubble(q,'user');
+ let answer='';
+ const cropNames=['rice','wheat','soybean','maize','corn','gram','chickpea','mustard','groundnut','moong','vegetables'];
+ const cropMatch=cropNames.find(c=>text.includes(c));
+ try{
+  if(/weather|मौसम|बारिश|rain|temperature|तापमान/.test(text)){
+    const city=(text.match(/(?:in|at|में|का|की)\s+([a-zA-Z ]{3,30})/)||[])[1]||'Bhopal';
+    const data=await getWeather(city.trim());
+    answer='Weather for '+(data.city||city)+': '+(data.description||data.condition||'current conditions')+'. Temperature: '+(data.temperature??'not available')+'°C. Please check the local forecast before irrigation or spraying.';
+  }else if(/soil|मिट्टी|black soil|काली मिट्टी|loamy|दोमट/.test(text)){
+    answer='For black soil, crops such as soybean, maize, gram and some other suitable crops can perform well when drainage, season and water availability are appropriate. For a precise choice, tell me your season and water availability.';
+  }else if(/irrigat|पानी|सिंच|water|watering/.test(text)){
+    answer='Irrigation depends on crop, soil, weather and growth stage. Avoid fixed watering only by calendar. Tell me the crop, soil type and current weather, and I can give a more specific practical checklist.';
+  }else if(/yellow|पीला|पील|leaf|पत्ती|पत्ते|disease|रोग|कीट|pest|insect/.test(text)){
+    answer='Yellow leaves can have several causes, including nutrient deficiency, water stress, root problems or pests/disease. First check soil moisture, affected leaf pattern and insects on the underside of leaves. Avoid spraying an unknown chemical before confirming the cause. If you share the crop and a clear leaf photo, the next version of this guide can provide image-based triage.';
+  }else if(/crop|फसल|क्या बोऊ|kya bo|which crop|कौन सी फसल/.test(text)){
+    answer='I can help choose a crop. Please tell me your season (Kharif, Rabi or Zaid), soil type, water availability and approximate land area.';
+  }else if(cropMatch){
+    const crop=cropMatch==='corn'?'Maize':cropMatch==='chickpea'?'Gram (Chickpea)':cropMatch==='moong'?'Moong Bean':cropMatch[0].toUpperCase()+cropMatch.slice(1);
+    const r=await fetch('/api/crops/'+encodeURIComponent(crop));if(r.ok){const d=await r.json();answer=crop+': season '+(d.crop?.season||'varies')+', soil '+(d.crop?.soil_type||'varies')+', duration '+(d.crop?.duration||'varies')+'. '+(d.crop?.description||'Use local agronomy guidance for field-specific decisions.');}else answer='Tell me what you want to know about '+crop+' — sowing, irrigation, fertilizer, pests, disease or harvesting.';
+  }else{
+    answer='I can guide you on crop selection, soil, irrigation, weather, common pest and disease symptoms, crop timelines and marketplace support. Please ask one specific farming question.';
+  }
+ }catch(e){answer='I could not fetch live data right now. I can still give general farming guidance if you describe the problem.'}
+ addBubble(answer,'assistant');speak(answer);
+}
+function startListening(){
+ if(!SpeechRecognition){setStatus('Voice recognition is not supported in this browser. Use Chrome/Edge or type your question below.');return}
+ if(recognition){recognition.stop();return}
+ recognition=new SpeechRecognition();recognition.lang=language.value;recognition.interimResults=false;recognition.continuous=false;
+ recognition.onstart=()=>{listen.classList.add('active');listen.textContent='⏹ Stop Listening';setStatus('Listening… बोलिए, मैं सुन रहा हूँ।')};
+ recognition.onresult=e=>{const q=e.results[0][0].transcript;setStatus('Processing: '+q);answer(q)};
+ recognition.onerror=e=>setStatus('Voice error: '+e.error+'. You can type the question below.');
+ recognition.onend=()=>{listen.classList.remove('active');listen.textContent='🎙️ Start Speaking';recognition=null};
+ recognition.start();
+}
+listen.onclick=startListening;
+document.getElementById('send').onclick=()=>{const q=manual.value.trim();if(q){manual.value='';answer(q)}};
+manual.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('send').click()});
+document.getElementById('speakLast').onclick=()=>{if(lastAnswer)speak(lastAnswer)};
+document.querySelectorAll('.example').forEach(b=>b.onclick=()=>answer(b.textContent));
+</script>
+</body>
+</html>
