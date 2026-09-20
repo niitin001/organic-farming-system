@@ -83,7 +83,28 @@ async function sendContactEmail({name,email,phone,subject,message}) {
   if (!response.ok) throw new Error(`Email delivery failed: ${response.status}`);
   return {sent:true};
 }
-function parseDataUrl(value,{maxBytes=2*1024*1024,allowed=["image/jpeg","image/png","image/webp","application/pdf"]}={}) { const s=String(value||"").trim(); const m=s.match(/^data:([^;]+);base64,(.+)$/); if(!m||!allowed.includes(m[1])) throw new Error("Unsupported file. Use JPG, PNG, WEBP or PDF."); if(Buffer.byteLength(m[2],"base64")>maxBytes) throw new Error("File is too large. Maximum size is 2 MB."); return s; }
+function parseDataUrl(value,{maxBytes=2*1024*1024,allowed=["image/jpeg","image/png","image/webp","application/pdf"]}={}) {
+  const s=String(value||"").trim(); const m=s.match(/^data:([^;]+);base64,(.+)$/);
+  if(!m||!allowed.includes(m[1])) throw new Error("Unsupported file. Use JPG, PNG, WEBP or PDF.");
+  const buffer=Buffer.from(m[2],"base64"); if(buffer.length>maxBytes) throw new Error("File is too large. Maximum size is 2 MB.");
+  return {dataUrl:s,mime:m[1],buffer};
+}
+const SUPABASE_URL=String(process.env.SUPABASE_URL||"").replace(/\/$/,"");
+const SUPABASE_SERVICE_ROLE_KEY=process.env.SUPABASE_SERVICE_ROLE_KEY;
+function requireStorageConfig(){if(!SUPABASE_URL||!SUPABASE_SERVICE_ROLE_KEY)throw new Error("Cloud storage is not configured.");}
+function storagePathPart(value){return String(value).replace(/[^a-zA-Z0-9._-]/g,"_").slice(0,180);}
+async function uploadToStorage(bucket,pathName,file){
+  requireStorageConfig();
+  const response=await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${pathName.split("/").map(encodeURIComponent).join("/")}`,{method:"POST",headers:{"Authorization":`Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,"apikey":SUPABASE_SERVICE_ROLE_KEY,"Content-Type":file.mime,"x-upsert":"true"},body:file.buffer});
+  if(!response.ok) throw new Error(`Cloud upload failed: ${response.status}`);
+  return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${pathName.split("/").map(encodeURIComponent).join("/")}`;
+}
+async function createSignedStorageUrl(bucket,pathName,expiresIn=3600){
+  requireStorageConfig();
+  const response=await fetch(`${SUPABASE_URL}/storage/v1/object/sign/${bucket}/${pathName.split("/").map(encodeURIComponent).join("/")}`,{method:"POST",headers:{"Authorization":`Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,"apikey":SUPABASE_SERVICE_ROLE_KEY,"Content-Type":"application/json"},body:JSON.stringify({expiresIn})});
+  if(!response.ok) throw new Error(`Unable to create secure document link: ${response.status}`);
+  const data=await response.json(); return data.signedURL?.startsWith("http")?data.signedURL:`${SUPABASE_URL}${data.signedURL}`;
+}
 function escapeHtml(value){
   return String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
 }
@@ -335,8 +356,10 @@ app.post("/api/seller/apply",requireAuth,async(req,res)=>{
   for(const doc of documents){
     const type=String(doc?.type||"").trim().toLowerCase(),name=String(doc?.name||"document").trim().slice(0,180);
     if(!["shop_license","gst","identity","address_proof"].includes(type))return res.status(400).json({error:"Invalid document type."});
-    let data;try{data=parseDataUrl(doc?.data,{maxBytes:2*1024*1024});}catch(e){return res.status(400).json({error:e.message});}
-    await pool.query("INSERT INTO seller_documents (seller_id,document_type,document_name,document_data) VALUES ($1,$2,$3,$4)",[seller.id,type,name,data]);
+    let file;try{file=parseDataUrl(doc?.data,{maxBytes:2*1024*1024});}catch(e){return res.status(400).json({error:e.message});}
+    const storagePath=`${seller.id}/${Date.now()}-${storagePathPart(name)}`;
+    try{await uploadToStorage("seller-documents",storagePath,file);}catch(e){return res.status(503).json({error:e.message});}
+    await pool.query("INSERT INTO seller_documents (seller_id,document_type,document_name,document_data) VALUES ($1,$2,$3,$4)",[seller.id,type,name,storagePath]);
   }
   res.status(201).json({seller,message:"Application submitted. Admin verification is required before products become visible."});
 });
@@ -435,13 +458,13 @@ app.get("/api/seller/analytics",requireAuth,requireSeller,async(req,res)=>{
 });
 app.post("/api/seller/products",requireAuth,requireSeller,async(req,res)=>{
   const name=String(req.body?.name||"").trim(),category=String(req.body?.category||"").trim(),price=Number(req.body?.price),stock=Number(req.body?.stock); let image=String(req.body?.image||"").trim();
-  if(req.body?.imageData){try{image=parseDataUrl(req.body.imageData,{maxBytes:2*1024*1024,allowed:["image/jpeg","image/png","image/webp"]});}catch(e){return res.status(400).json({error:e.message});}}
+  if(req.body?.imageData){try{const file=parseDataUrl(req.body.imageData,{maxBytes:2*1024*1024,allowed:["image/jpeg","image/png","image/webp"]}); const ext={"image/jpeg":"jpg","image/png":"png","image/webp":"webp"}[file.mime]; image=await uploadToStorage("product-images",`${req.seller.id}/${Date.now()}-${storagePathPart(name)}.${ext}`,file);}catch(e){return res.status(503).json({error:e.message});}}
   if(!name||!category||!Number.isFinite(price)||price<0||!Number.isInteger(stock)||stock<0)return res.status(400).json({error:"Enter valid product details."});
   const {rows}=await pool.query("INSERT INTO products (name,category,price,stock,image,seller_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *",[name,category,price,stock,image,req.seller.id]); res.status(201).json({product:rows[0]});
 });
 app.patch("/api/seller/products/:id",requireAuth,requireSeller,async(req,res)=>{
   const id=Number(req.params.id),name=String(req.body?.name||"").trim(),category=String(req.body?.category||"").trim(),price=Number(req.body?.price),stock=Number(req.body?.stock); let image=String(req.body?.image||"").trim();
-  if(req.body?.imageData){try{image=parseDataUrl(req.body.imageData,{maxBytes:2*1024*1024,allowed:["image/jpeg","image/png","image/webp"]});}catch(e){return res.status(400).json({error:e.message});}}
+  if(req.body?.imageData){try{const file=parseDataUrl(req.body.imageData,{maxBytes:2*1024*1024,allowed:["image/jpeg","image/png","image/webp"]}); const ext={"image/jpeg":"jpg","image/png":"png","image/webp":"webp"}[file.mime]; image=await uploadToStorage("product-images",`${req.seller.id}/${Date.now()}-${storagePathPart(name)}.${ext}`,file);}catch(e){return res.status(503).json({error:e.message});}}
   if(!Number.isInteger(id)||!name||!category||!Number.isFinite(price)||price<0||!Number.isInteger(stock))return res.status(400).json({error:"Enter valid product details."});
   const {rows}=await pool.query("UPDATE products SET name=$1,category=$2,price=$3,stock=$4,image=$5 WHERE id=$6 AND seller_id=$7 RETURNING *",[name,category,price,stock,image,id,req.seller.id]);
   if(!rows[0])return res.status(404).json({error:"Seller product not found."});
@@ -459,7 +482,9 @@ app.get("/api/admin/sellers",requireAuth,requireAdmin,async(_req,res)=>{
 });
 app.get("/api/admin/sellers/:id/documents",requireAuth,requireAdmin,async(req,res)=>{
   const id=Number(req.params.id); if(!Number.isInteger(id))return res.status(400).json({error:"Invalid seller id."});
-  const {rows}=await pool.query("SELECT id,document_type,document_name,document_data,status,admin_note,created_at,reviewed_at FROM seller_documents WHERE seller_id=$1 ORDER BY created_at DESC",[id]); res.json({documents:rows});
+  const {rows}=await pool.query("SELECT id,document_type,document_name,document_data,status,admin_note,created_at,reviewed_at FROM seller_documents WHERE seller_id=$1 ORDER BY created_at DESC",[id]);
+  const documents=await Promise.all(rows.map(async doc=>({...doc,document_data:await createSignedStorageUrl("seller-documents",doc.document_data)})));
+  res.json({documents});
 });
 app.patch("/api/admin/sellers/:id",requireAuth,requireAdmin,async(req,res)=>{
   const id=Number(req.params.id),status=String(req.body?.status||"").trim().toLowerCase(),note=String(req.body?.note||"").trim().slice(0,1000);
