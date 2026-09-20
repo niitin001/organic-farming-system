@@ -622,6 +622,25 @@ app.get("/api/admin/contacts",requireAuth,requireAdmin,async(_req,res)=>{
   res.json({contacts:rows});
 });
 
+app.post("/api/crop-image-analysis",async(req,res)=>{
+  try{
+    const apiKey=process.env.OPENAI_API_KEY;
+    if(!apiKey)return res.status(503).json({error:"Image analysis is not configured yet. Add OPENAI_API_KEY in the server environment."});
+    const imageData=String(req.body?.imageData||"").trim();
+    const question=String(req.body?.question||"").trim().slice(0,1000);
+    const match=imageData.match(/^data:(image\\/(?:jpeg|png|webp));base64,(.+)$/i);
+    if(!match)return res.status(400).json({error:"Upload a JPG, PNG or WEBP crop photo."});
+    const buffer=Buffer.from(match[2],"base64");
+    if(buffer.length>5*1024*1024)return res.status(413).json({error:"Image is too large. Maximum size is 5 MB."});
+    const prompt="You are a cautious agricultural image-triage assistant for Indian farmers. Analyze the uploaded crop/plant photo, but do not claim certainty from an image alone. Reply in simple Hindi/Hinglish unless the user question is clearly English. Give: (1) likely crop/plant if visible, (2) visible symptoms, (3) possible causes as possibilities, (4) immediate low-risk steps, (5) what to check next, and (6) when to contact a local agriculture officer or plant pathologist. Do not prescribe pesticide dosage, mixing instructions, or unsafe chemical use from the photo alone. Clearly say when the image is insufficient. "+(question?"Farmer question: "+question:"");
+    const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{"Authorization":"Bearer "+apiKey,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_VISION_MODEL||"gpt-5.6-luna",input:[{role:"user",content:[{type:"input_text",text:prompt},{type:"input_image",image_url:imageData,detail:"high"}]}]})});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)return res.status(502).json({error:data?.error?.message||"Image analysis service is unavailable."});
+    const answer=String(data.output_text||"").trim();
+    if(!answer)return res.status(502).json({error:"The image analysis service returned no usable answer."});
+    res.json({answer,model:process.env.OPENAI_VISION_MODEL||"gpt-5.6-luna"});
+  }catch(error){console.error("Crop image analysis error:",error);res.status(500).json({error:"Unable to analyze the image right now."});}
+});
 app.post("/api/contact",requireAuth,async(req,res)=>{
   const name=String(req.body?.name||"").trim();
   const email=String(req.body?.email||"").trim().toLowerCase();
