@@ -622,6 +622,67 @@ app.get("/api/admin/contacts",requireAuth,requireAdmin,async(_req,res)=>{
   res.json({contacts:rows});
 });
 
+async function migrateRenderDatabaseToSupabase() {
+  const targetUrl=String(process.env.SUPABASE_DB_URL||"").trim();
+  if(!targetUrl) throw new Error("SUPABASE_DB_URL is not configured.");
+  const source=await pool.connect();
+  const targetPool=new Pool({connectionString:targetUrl,ssl:{rejectUnauthorized:false},max:2});
+  const target=await targetPool.connect();
+  const tables=[
+    ["users","id,name,email,password_hash,role,created_at"],
+    ["crops","id,name,season,soil_type,duration,water_requirement,description"],
+    ["seller_profiles","id,user_id,store_name,phone,address,city,state,pincode,status,verified_at,created_at,verification_notes"],
+    ["products","id,name,category,price,stock,image,seller_id"],
+    ["orders","id,user_id,total_amount,status,created_at"],
+    ["seller_orders","id,order_id,seller_id,status,seller_total,created_at"],
+    ["order_items","id,order_id,product_id,quantity,seller_order_id"],
+    ["contacts","id,user_id,message,created_at"],
+    ["saved_crops","id,user_id,crop_id,created_at"],
+    ["farm_tasks","id,user_id,crop_name,sowing_date,task_title,task_type,due_date,status,created_at"],
+    ["product_reviews","id,product_id,user_id,order_id,seller_order_id,rating,comment,created_at"],
+    ["seller_documents","id,seller_id,document_type,document_name,document_data,status,admin_note,created_at,reviewed_at"]
+  ];
+  try{
+    await source.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+    const snapshot={}; let totalRows=0;
+    for(const [table,columns] of tables){
+      const r=await source.query("SELECT "+columns+" FROM "+table+" ORDER BY id");
+      snapshot[table]=r.rows; totalRows+=r.rowCount;
+    }
+    if(!snapshot.users.length) throw new Error("Source database has no users; migration stopped.");
+    await target.query("BEGIN");
+    const existing=await target.query("SELECT COUNT(*)::int AS count FROM users");
+    if(existing.rows[0].count>0) throw new Error("Supabase already contains users; migration stopped to avoid overwriting data.");
+    for(const [table,columns] of tables){
+      const names=columns.split(",");
+      for(const row of snapshot[table]){
+        const placeholders=names.map((_,i)=>"$"+(i+1)).join(",");
+        await target.query("INSERT INTO "+table+" ("+columns+") VALUES ("+placeholders+")",names.map(c=>row[c]));
+      }
+    }
+    for(const [table] of tables){
+      const seq=await target.query("SELECT pg_get_serial_sequence($1,'id') AS seq",[table]);
+      if(seq.rows[0]?.seq){
+        const max=await target.query("SELECT MAX(id) AS max_id FROM "+table);
+        const value=max.rows[0].max_id;
+        if(value!==null) await target.query("SELECT setval($1::regclass,$2,true)",[seq.rows[0].seq,Number(value)]);
+      }
+    }
+    await target.query("COMMIT"); await source.query("COMMIT");
+    return {totalRows,counts:Object.fromEntries(tables.map(([t])=>[t,snapshot[t].length]))};
+  }catch(error){
+    try{await target.query("ROLLBACK");}catch{}
+    try{await source.query("ROLLBACK");}catch{}
+    throw error;
+  }finally{target.release();await targetPool.end();source.release();}
+}
+
+app.post("/api/admin/migrate-to-supabase",requireAuth,requireAdmin,async(_req,res)=>{
+  if(process.env.DB_MIGRATION_ENABLED!=="true")return res.status(404).json({error:"Migration endpoint is disabled."});
+  try{const result=await migrateRenderDatabaseToSupabase();res.json({success:true,result});}
+  catch(error){console.error("Database migration failed:",error.message);res.status(500).json({error:"Database migration failed. Check Render logs."});}
+});
+
 app.post("/api/crop-image-analysis",async(req,res)=>{
   try{
     const apiKey=process.env.OPENAI_API_KEY;
