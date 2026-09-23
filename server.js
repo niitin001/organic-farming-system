@@ -677,10 +677,27 @@ async function migrateRenderDatabaseToSupabase() {
   }finally{target.release();await targetPool.end();source.release();}
 }
 
+app.get("/api/admin/migration-status",requireAuth,requireAdmin,async(_req,res)=>{
+  const enabled=process.env.DB_MIGRATION_ENABLED==="true";
+  const configured=Boolean(String(process.env.SUPABASE_DB_URL||"").trim());
+  const status={enabled,configured,sourceDatabase:false,targetDatabase:false,sourceUsers:null,targetUsers:null};
+  try{await pool.query("SELECT 1");status.sourceDatabase=true;const r=await pool.query("SELECT COUNT(*)::int AS count FROM users");status.sourceUsers=r.rows[0].count;}catch(error){status.sourceError=error.message;}
+  if(configured){
+    const targetPool=new Pool({connectionString:String(process.env.SUPABASE_DB_URL).trim(),ssl:{rejectUnauthorized:false},max:1,connectionTimeoutMillis:8000});
+    try{await targetPool.query("SELECT 1");status.targetDatabase=true;const r=await targetPool.query("SELECT COUNT(*)::int AS count FROM users");status.targetUsers=r.rows[0].count;}catch(error){status.targetError=error.message;}finally{await targetPool.end().catch(()=>{});}
+  }
+  res.json({status});
+});
+
 app.post("/api/admin/migrate-to-supabase",requireAuth,requireAdmin,async(_req,res)=>{
-  if(process.env.DB_MIGRATION_ENABLED!=="true")return res.status(404).json({error:"Migration endpoint is disabled."});
-  try{const result=await migrateRenderDatabaseToSupabase();res.json({success:true,result});}
-  catch(error){console.error("Database migration failed:",error.message);res.status(500).json({error:"Database migration failed. Check Render logs."});}
+  if(process.env.DB_MIGRATION_ENABLED!=="true")return res.status(404).json({error:"Migration mode is disabled. Set DB_MIGRATION_ENABLED=true in Render Environment."});
+  try{
+    const result=await migrateRenderDatabaseToSupabase();
+    res.json({success:true,result});
+  }catch(error){
+    console.error("Database migration failed:",error.message);
+    res.status(500).json({error:"Database migration failed: "+error.message});
+  }
 });
 
 app.post("/api/crop-image-analysis",async(req,res)=>{
