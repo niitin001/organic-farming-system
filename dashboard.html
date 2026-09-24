@@ -5,7 +5,7 @@
 <title>Farmer Dashboard | Farmer Friendly</title>
 <link rel="stylesheet" href="styles.css">
 <style>
-body{padding-top:86px}.dash{padding:55px 0 80px}.dash-head{display:flex;justify-content:space-between;align-items:end;gap:20px;margin-bottom:30px}.kicker{font-size:11px;letter-spacing:.16em;font-weight:900;color:var(--green)}h1{font:800 clamp(36px,5vw,58px)/1.05 Manrope,sans-serif;letter-spacing:-.05em;margin-top:8px}h1 span{color:var(--green)}.muted{color:var(--muted);max-width:600px}.welcome{background:var(--green-dark);color:#fff;border-radius:24px;padding:28px 30px;min-width:250px}.welcome small{color:var(--lime);text-transform:uppercase;letter-spacing:.12em}.welcome strong{display:block;font:800 24px Manrope;margin-top:5px}.logout{border:0;background:none;color:#fff;text-decoration:underline;cursor:pointer;margin-top:12px;font-size:12px}.dash-grid{display:grid;grid-template-columns:1.35fr .65fr;gap:20px}.panel{background:#fff;border:1px solid var(--line);border-radius:22px;padding:26px;box-shadow:0 8px 30px rgba(8,48,36,.045)}.panel h2{font:800 24px Manrope;letter-spacing:-.03em;margin-bottom:8px}.panel p{font-size:13px;color:var(--muted)}.action-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:22px}.action{padding:18px;border-radius:16px;background:var(--green-soft);border:1px solid transparent;transition:.25s}.action:hover{transform:translateY(-3px);border-color:#b9d8c8}.action b{display:block;font:800 16px Manrope;margin-top:8px}.action span{font-size:24px}.stat-list{display:grid;gap:12px;margin-top:18px}.stat{display:flex;justify-content:space-between;padding:15px;border-radius:14px;background:#f6f8f5}.stat span{color:var(--muted);font-size:12px}.stat strong{font:800 14px Manrope}.saved-list{display:grid;gap:10px;margin-top:16px}.saved-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px;border:1px solid var(--line);border-radius:13px}.saved-item b{font-size:14px}.saved-item small{display:block;color:var(--muted);margin-top:3px}.remove{border:0;background:#f4eee8;border-radius:9px;padding:7px 9px;cursor:pointer}.empty{font-size:13px;color:var(--muted);padding:12px 0}.tip{margin-top:18px;padding:18px;border-left:3px solid var(--lime);background:#f7f9ef;border-radius:12px;font-size:13px}.order-card{margin-top:14px;padding:18px;border:1px solid var(--line);border-radius:16px;background:#fbfdfb}.order-meta{display:flex;justify-content:space-between;gap:12px}.seller-meta{margin-top:4px;color:var(--muted);font-size:12px}.timeline{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin:16px 0 5px}.step{height:8px;border-radius:99px;background:#e5ebe6}.step.done{background:#2d7a46}.step.current{box-shadow:0 0 0 3px #dceedd}.labels{display:flex;justify-content:space-between;color:#68756d;font-size:10px}.cancelled{margin-top:12px;padding:9px 11px;border-radius:10px;background:#fff1f1;color:#a52f2f;font-size:12px;font-weight:800}.review-row{margin-top:10px}@media(max-width:800px){.dash-head,.dash-grid{display:block}.welcome{margin-top:20px}.action-grid{grid-template-columns:1fr}.panel{margin-bottom:18px}}
+body{padding-top:86px}.dash{padding:55px 0 80px}.dash-head{display:flex;justify-content:space-between;align-items:end;gap:20px;margin-bottom:30px}.kicker{font-size:11px;letter-spacing:.16em;font-weight:900;color:var(--green)}h1{font:800 clamp(36px,5vw,58px)/1.05 Manrope,sans-serif;letter-spacing:-.05em;margin-top:8px}h1 span{color:var(--green)}.muted{color:var(--muted);max-width:600px}.welcome{background:var(--green-dark);color:#fff;border-radius:24px;padding:28px 30px;min-width:250px}.welcome small{color:var(--lime);text-transform:uppercase;letter-spacing:.12em}.welcome strong{display:block;font:800 24px Manrope;margin-top:5px}.logout{border:0;background:none;color:#fff;text-decoration:underline;cursor:pointer;margin-top:12px;font-size:12px}.dash-grid{display:grid;grid-template-columns:1.35fr .65fr;gap:20px}.panel{background:#fff;border:1px solid var(--line);border-radius:22px;padding:26px;box-shadow:0 8px 30px rgba(8,48,36,.045)}.panel h2{font:800 24px Manrope;letter-spacing:-.03em;margin-bottom:8px}.panel p{font-size:13px;color:var(--muted)}.action-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:22px}.action{padding:18px;border-radius:16px;background:var(--green-soft);border:1px solid transparent;transition:.25s}.action:hover{transform:translateY(-3px);border-color:#b9d8c8}.action b{display:block;font:800 16px Manrope;margin-top:8px}.action span{font-size:24px}.stat-list{display:grid;gap:12px;margin-top:18px}.stat{display:flex;justify-content:space-between;padding:15px;border-radius:14px;background:#f6f8f5}.stat span{color:var(--muted);font-size:12px}.stat strong{font:800 14px Manrope}.saved-list{display:grid;gap:10px;margin-top:16px}.saved-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px;border:1px solid var(--line);border-radius:13px}.saved-item b{font-size:14px}.saved-item small{display:block;color:var(--muted);margin-top:3px}.remove{border:0;background:#f4eee8;border-radius:9px;padding:7px 9px;cursor:pointer}.empty{font-size:13px;color:var(--muted);padding:12px 0}.tip{margin-top:18px;padding:18px;border-left:3px solid var(--lime);background:#f7f9ef;border-radius:12px;font-size:13px}.order-card{margin-top:14px;padding:18px;border:1px solid var(--line);border-radius:16px;background:#fbfdfb}.order-meta{display:flex;justify-content:space-between;gap:12px}.seller-meta{margin-top:4px;color:var(--muted);font-size:12px}.timeline{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin:16px 0 5px}.step{height:8px;border-radius:99px;background:#e5ebe6}.step.done{background:#2d7a46}.step.current{box-shadow:0 0 0 3px #dceedd}.labels{display:flex;justify-content:space-between;color:#68756d;font-size:10px}.cancelled{margin-top:12px;padding:9px 11px;border-radius:10px;background:#fff1f1;color:#a52f2f;font-size:12px;font-weight:800}.review-row{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px}.review-btn{border:1px solid #b9d8c8;background:#f3faf4;border-radius:9px;padding:8px 11px;cursor:pointer;font-weight:700}.review-btn:hover{background:#e8f5eb}.review-modal{position:fixed;inset:0;background:rgba(4,22,15,.52);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}.review-modal.open{display:flex}.review-box{width:min(460px,100%);background:#fff;border-radius:22px;padding:25px;box-shadow:0 25px 70px rgba(0,0,0,.2)}.review-box h3{font:800 24px Manrope;margin:0}.review-box p{color:var(--muted);font-size:13px;margin:7px 0 18px}.stars{display:flex;gap:7px;margin-bottom:18px}.star{width:45px;height:42px;border:1px solid #d9e2dc;border-radius:10px;background:#fff;cursor:pointer;font-size:22px}.star.active{background:#f4f7e8;border-color:#a9c47f}.review-box textarea{width:100%;min-height:110px;resize:vertical;border:1px solid #d9e2dc;border-radius:12px;padding:12px;font:inherit}.review-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:14px}.review-actions button{border:0;border-radius:10px;padding:10px 15px;cursor:pointer;font-weight:800}.review-cancel{background:#eef2ef}.review-submit{background:var(--green-dark);color:#fff}.review-status{font-size:12px;color:#b23b2f;min-height:17px;margin-top:8px}@media(max-width:800px){.dash-head,.dash-grid{display:block}.welcome{margin-top:20px}.action-grid{grid-template-columns:1fr}.panel{margin-bottom:18px}.review-box{padding:20px}}
 </style>
 </head>
 <body>
@@ -24,17 +24,37 @@ body{padding-top:86px}.dash{padding:55px 0 80px}.dash-head{display:flex;justify-
 </div></section>
 <aside class="panel"><h2>Your workspace</h2><p>Your saved crop shortlist is stored in PostgreSQL.</p><div class="stat-list"><div class="stat"><span>Saved crops</span><strong id="savedCount">0</strong></div><div class="stat"><span>Farm planner</span><strong><a href="farm-planner.html">Open</a></strong></div><div class="stat"><span>Orders</span><strong id="orderCount">0</strong></div></div><div id="savedList" class="saved-list"><div class="empty">No saved crops yet. Save one from Smart Crop Recommendation.</div></div><div class="tip">🌿 <strong>Tip:</strong> Save crops that fit your conditions so you can compare them later.</div></aside>
 </div></div><section id="order-history" style="margin-top:24px"><div style="background:#fff;border:1px solid #e5ece7;border-radius:20px;padding:22px"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div><h2 style="margin:0">🛍️ Order Tracking</h2><p style="margin:6px 0;color:#68756d">Follow each seller's progress from confirmation to delivery.</p></div><a href="marketplace.html" class="quick-link">Shop now →</a></div><div id="orders" style="margin-top:18px">Loading orders…</div></div></section></main>
+
+<div class="review-modal" id="reviewModal" role="dialog" aria-modal="true" aria-labelledby="reviewTitle">
+  <div class="review-box">
+    <h3 id="reviewTitle">Review product</h3>
+    <p id="reviewProductName">Share your experience after delivery.</p>
+    <div class="stars" id="stars" aria-label="Choose a rating">
+      <button class="star" type="button" data-rating="1" aria-label="1 star">☆</button>
+      <button class="star" type="button" data-rating="2" aria-label="2 stars">☆</button>
+      <button class="star" type="button" data-rating="3" aria-label="3 stars">☆</button>
+      <button class="star" type="button" data-rating="4" aria-label="4 stars">☆</button>
+      <button class="star" type="button" data-rating="5" aria-label="5 stars">☆</button>
+    </div>
+    <textarea id="reviewComment" maxlength="500" placeholder="Write a short review (optional)"></textarea>
+    <div class="review-status" id="reviewStatus"></div>
+    <div class="review-actions"><button class="review-cancel" type="button" id="reviewCancel">Cancel</button><button class="review-submit" type="button" id="reviewSubmit">Submit review</button></div>
+  </div>
+</div>
+
 <script>
 (function(){const dict={hi:{marketplace:"मार्केटप्लेस",home:"होम",dashboard:"डैशबोर्ड",weather:"मौसम"}};function setLang(l){localStorage.setItem("ffs_lang",l);document.querySelectorAll("[data-i18n]").forEach(e=>{const k=e.dataset.i18n;if(l==="hi"&&dict.hi[k])e.textContent=dict.hi[k];});document.querySelectorAll("[data-lang]").forEach(b=>b.classList.toggle("active",b.dataset.lang===l));}document.querySelectorAll("[data-lang]").forEach(b=>b.onclick=()=>setLang(b.dataset.lang));setLang(localStorage.getItem("ffs_lang")||"en");})();
-</script><script>
-const token=localStorage.getItem("ffs_token");\nasync function loadOrderCount(){try{const r=await fetch("/api/orders",{headers:{Authorization:"Bearer "+token}});if(r.ok){const d=await r.json();const el=document.getElementById("orderCount");if(el)el.textContent=(d.orders||[]).length}}catch{}}
+</script>
+<script>
+const token=localStorage.getItem("ffs_token");
+async function loadOrderCount(){try{const r=await fetch("/api/orders",{headers:{Authorization:"Bearer "+token}});if(r.ok){const d=await r.json();const el=document.getElementById("orderCount");if(el)el.textContent=(d.orders||[]).length}}catch{}}
 async function loadDashboard(){
  if(!token){location.href="index.html";return}
  try{
-  const me=await fetch("/api/me",{headers:{Authorization:"Bearer "+token}}); if(!me.ok)throw new Error();
-  const user=(await me.json()).user; document.getElementById("userName").textContent=user.name; if(user.role==="admin")document.getElementById("adminNav").style.display="inline-block";
-  const r=await fetch("/api/saved-crops",{headers:{Authorization:"Bearer "+token}}); if(!r.ok)throw new Error();
-  const data=await r.json(); document.getElementById("savedCount").textContent=data.savedCrops.length;
+  const me=await fetch("/api/me",{headers:{Authorization:"Bearer "+token}});if(!me.ok)throw new Error();
+  const user=(await me.json()).user;document.getElementById("userName").textContent=user.name;if(user.role==="admin")document.getElementById("adminNav").style.display="inline-block";
+  const r=await fetch("/api/saved-crops",{headers:{Authorization:"Bearer "+token}});if(!r.ok)throw new Error();
+  const data=await r.json();document.getElementById("savedCount").textContent=data.savedCrops.length;
   const list=document.getElementById("savedList");
   if(!data.savedCrops.length){list.innerHTML='<div class="empty">No saved crops yet. Save one from Smart Crop Recommendation.</div>';return}
   list.innerHTML=data.savedCrops.map(function(c){return '<div class="saved-item"><div><b>'+c.name+'</b><small>'+c.duration+' • '+c.water_requirement+' water</small></div><button class="remove" onclick="removeCrop('+c.id+')" title="Remove">×</button></div>'}).join("");
@@ -46,25 +66,37 @@ loadDashboard();loadOrderCount();
 </script>
 <script>
 function money(n){return "₹"+Number(n||0).toLocaleString("en-IN",{maximumFractionDigits:2});}
-function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));}
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",""":"&quot;","'":"&#039;"}[c]));}
 const steps=[["pending","Confirmed"],["confirmed","Confirmed"],["packed","Packed"],["shipped","Shipped"],["delivered","Delivered"]];
-function orderTimeline(status){
- if(status==="cancelled")return "<div class='cancelled'>Order cancelled</div>";
- const idx=steps.findIndex(x=>x[0]===status); const safe=idx<0?0:idx;
- return "<div class='timeline'>"+steps.map((x,i)=>"<div class='step "+(i<=safe?"done ":"")+(i===safe?"current":"")+" title='"+x[1]+"'></div>").join("")+"</div><div class='labels'><span>Confirmed</span><span>Delivered</span></div>";
+function orderTimeline(status){if(status==="cancelled")return "<div class='cancelled'>Order cancelled</div>";const idx=steps.findIndex(x=>x[0]===status);const safe=idx<0?0:idx;return "<div class='timeline'>"+steps.map((x,i)=>"<div class='step "+(i<=safe?"done ":"")+(i===safe?"current":"")+"' title='"+x[1]+"'></div>").join("")+"</div><div class='labels'><span>Confirmed</span><span>Delivered</span></div>";}
+function renderOrders(orders){
+ const box=document.getElementById("orders");if(!box)return;
+ box.innerHTML=orders.length?orders.slice(0,5).map(o=>"<div class='order-card'><div class='order-meta'><strong>Order #"+o.id+"</strong><strong>"+money(o.total_amount)+"</strong></div><div class='seller-meta'>Placed "+new Date(o.created_at).toLocaleDateString("en-IN")+"</div>"+(o.seller_orders||[]).map(s=>{
+   const reviewItems=(o.items||[]).filter(x=>x.sellerOrderId===s.sellerOrderId&&x.sellerStatus==="delivered");
+   const reviewHtml=reviewItems.length?"<div class='review-row'>"+reviewItems.map(x=>"<button class='review-btn' onclick='openReview("+x.productId+",\""+esc(x.name).replace(/"/g,"&quot;")+"")'>⭐ Review "+esc(x.name)+"</button>").join("")+"</div>":"";
+   return "<div style='margin-top:15px'><div class='order-meta'><strong>"+esc(s.seller)+"</strong><span style='text-transform:capitalize;font-size:12px'>"+esc(s.status)+"</span></div>"+orderTimeline(s.status)+reviewHtml+"</div>";
+ }).join("")+"</div>").join(""):"No orders yet. Start with the marketplace.";
 }
-async function loadOrders(){
- const box=document.getElementById("orders"); if(!box)return; const token=localStorage.getItem("ffs_token"); if(!token){box.textContent="Login to view your orders.";return;}
+async function loadOrders(){const box=document.getElementById("orders");if(!box)return;const auth=localStorage.getItem("ffs_token");if(!auth){box.textContent="Login to view your orders.";return}try{const r=await fetch("/api/orders",{headers:{Authorization:"Bearer "+auth}});const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to load orders");renderOrders(d.orders||[]);}catch(e){box.textContent=e.message;}}
+let reviewProductId=null,selectedRating=0;
+function setRating(value){selectedRating=value;document.querySelectorAll(".star").forEach(b=>{const active=Number(b.dataset.rating)<=value;b.classList.toggle("active",active);b.textContent=active?"★":"☆";});}
+function openReview(productId,name){reviewProductId=productId;selectedRating=0;document.getElementById("reviewTitle").textContent="Review product";document.getElementById("reviewProductName").textContent=name||"Share your experience after delivery.";document.getElementById("reviewComment").value="";document.getElementById("reviewStatus").textContent="";setRating(0);document.getElementById("reviewModal").classList.add("open");}
+function closeReview(){document.getElementById("reviewModal").classList.remove("open");reviewProductId=null;}
+document.querySelectorAll(".star").forEach(b=>b.onclick=()=>setRating(Number(b.dataset.rating)));
+document.getElementById("reviewCancel").onclick=closeReview;
+document.getElementById("reviewModal").onclick=e=>{if(e.target.id==="reviewModal")closeReview();};
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeReview();});
+document.getElementById("reviewSubmit").onclick=async()=>{
+ const status=document.getElementById("reviewStatus");status.textContent="";
+ if(!reviewProductId||selectedRating<1){status.textContent="Please choose a rating from 1 to 5.";return}
+ const auth=localStorage.getItem("ffs_token");
  try{
-  const r=await fetch("/api/orders",{headers:{Authorization:"Bearer "+token}});const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to load orders");
-  box.innerHTML=d.orders.length?d.orders.slice(0,5).map(o=>"<div class='order-card'><div class='order-meta'><strong>Order #"+o.id+"</strong><strong>"+money(o.total_amount)+"</strong></div><div class='seller-meta'>Placed "+new Date(o.created_at).toLocaleDateString("en-IN")+"</div>"+(o.seller_orders||[]).map(s=>{
-    const reviewItems=(o.items||[]).filter(x=>x.sellerOrderId===s.sellerOrderId&&x.sellerStatus==="delivered");
-    const reviewHtml=reviewItems.length?"<div class='review-row'>"+reviewItems.map(x=>"<button onclick='reviewProduct("+x.productId+")' style='border:1px solid #b9d8c8;background:#f3faf4;border-radius:9px;padding:8px 11px;cursor:pointer;font-weight:700'>⭐ Review "+esc(x.name)+"</button>").join(" ")+"</div>":"";
-    return "<div style='margin-top:15px'><div class='order-meta'><strong>"+esc(s.seller)+"</strong><span style='text-transform:capitalize;font-size:12px'>"+esc(s.status)+"</span></div>"+orderTimeline(s.status)+reviewHtml+"</div>";
-  }).join("")+"</div>").join(""):"No orders yet. Start with the marketplace.";
- }catch(e){box.textContent=e.message;}
-}
-async function reviewProduct(productId){const rating=Number(prompt("Give a rating from 1 to 5:","5"));if(!Number.isInteger(rating)||rating<1||rating>5)return;const comment=prompt("Write a short review (optional):","");const token=localStorage.getItem("ffs_token");const r=await fetch("/api/products/"+productId+"/reviews",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({rating,comment:comment||""})});const d=await r.json();alert(d.message||d.error||"Unable to submit review.");if(r.ok)loadOrders();}
-loadOrders();}
+  const r=await fetch("/api/products/"+reviewProductId+"/reviews",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+auth},body:JSON.stringify({rating:selectedRating,comment:document.getElementById("reviewComment").value.trim()})});
+  const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to submit review.");
+  closeReview();await loadOrders();alert("Review submitted successfully.");
+ }catch(e){status.textContent=e.message;}
+};
 loadOrders();
 </script>
+</body>
+</html>
