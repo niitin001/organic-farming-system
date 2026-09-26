@@ -61,6 +61,29 @@
 <script>
 let products=[],productCache=JSON.parse(localStorage.getItem("ks_product_cache")||"{}"),cart=JSON.parse(localStorage.getItem("ks_cart")||"{}"),wishlist=JSON.parse(localStorage.getItem("ks_wishlist")||"[]");
 const $=id=>document.getElementById(id);
+const token=()=>localStorage.getItem("ffs_token");
+async function refreshDbCart(){
+ const t=token(); if(!t)return;
+ const r=await fetch("/api/cart",{headers:{Authorization:"Bearer "+t}});
+ if(!r.ok)return;
+ const d=await r.json();
+ cart=Object.fromEntries((d.items||[]).map(i=>[String(i.productId),Number(i.quantity)]));
+ localStorage.setItem("ks_cart",JSON.stringify(cart));
+ updateCart();
+}
+async function syncGuestCart(){
+ const t=token(); if(!t)return;
+ const key="ks_cart_synced_user";
+ let userId="unknown";
+ try{userId=JSON.parse(localStorage.getItem("ffs_user")||"{}").id||"unknown";}catch{}
+ if(localStorage.getItem(key)===String(userId)){await refreshDbCart();return;}
+ const guestItems=Object.entries(cart).map(([productId,quantity])=>({productId:Number(productId),quantity:Number(quantity)}));
+ if(guestItems.length){
+   const r=await fetch("/api/cart/sync",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+t},body:JSON.stringify({items:guestItems})});
+   if(!r.ok){return;}
+ }
+ localStorage.removeItem("ks_cart"); localStorage.setItem(key,String(userId)); cart={}; await refreshDbCart();
+}
 function money(n){return "₹"+Number(n).toLocaleString("en-IN",{maximumFractionDigits:2});}
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));}
 function setCategory(cat){$("category").value=cat;$("categoryList").querySelectorAll("button").forEach(b=>b.classList.toggle("active",b.dataset.cat===cat));load();}
@@ -70,6 +93,7 @@ async function load(){
  const d=await r.json();products=d.products||[];products.forEach(p=>productCache[String(p.id)]=p);localStorage.setItem("ks_product_cache",JSON.stringify(productCache));
  products.sort((a,b)=>{const s=$("sort").value;if(s==="price_asc")return Number(a.price)-Number(b.price);if(s==="price_desc")return Number(b.price)-Number(a.price);if(s==="rating")return Number(b.avg_rating||0)-Number(a.avg_rating||0);return 0;});
  render();
+ if(token()) await syncGuestCart();
 }
 function render(){
  $("resultCount").textContent=products.length+" product"+(products.length===1?"":"s");
@@ -87,9 +111,17 @@ function openDetail(id){
  $("detail").classList.add("open");$("detail").setAttribute("aria-hidden","false");
 }
 function changeQty(delta){const q=$("qty");q.value=Math.max(1,Math.min(Number(q.max)||999,Number(q.value||1)+delta));}
-function addFromDetail(id){const qty=Math.max(1,Number($("qty").value||1));cart[id]=(cart[id]||0)+qty;saveCart();closeDetail();toggleCart(true);}
+async function addFromDetail(id){const qty=Math.max(1,Number($("qty").value||1));await add(id,qty);closeDetail();toggleCart(true);}
 function closeDetail(){$("detail").classList.remove("open");$("detail").setAttribute("aria-hidden","true");}
-function add(id){cart[id]=(cart[id]||0)+1;saveCart();toggleCart(true);}
+async function add(id,qty=1){
+ const t=token();
+ if(t){
+   const r=await fetch("/api/cart/items",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+t},body:JSON.stringify({productId:Number(id),quantity:Number(qty)})});
+   const d=await r.json(); if(!r.ok){alert(d.error||"Unable to update cart.");return;}
+   await refreshDbCart();
+ }else{cart[id]=(cart[id]||0)+qty;saveCart();}
+ toggleCart(true);
+}
 function saveCart(){localStorage.setItem("ks_cart",JSON.stringify(cart));updateCart();}
 function updateCart(){
  let total=0,count=0,rows=[];
@@ -100,14 +132,26 @@ function updateCart(){
  }
  $("count").textContent=count;$("total").textContent=money(total);$("cartItems").innerHTML=rows.length?rows.join(""):"Your cart is empty.";$("cartTotal").textContent="Total: "+money(total);
 }
-function changeCart(id,d){cart[id]=Math.max(0,(cart[id]||0)+d);if(!cart[id])delete cart[id];saveCart();}
-function removeCart(id){delete cart[id];saveCart();}
+async function changeCart(id,d){
+ const next=Math.max(0,(cart[id]||0)+d);
+ const t=token();
+ if(t){
+   if(next===0) await fetch("/api/cart/items/"+encodeURIComponent(id),{method:"DELETE",headers:{Authorization:"Bearer "+t}});
+   else await fetch("/api/cart/items/"+encodeURIComponent(id),{method:"PATCH",headers:{"Content-Type":"application/json",Authorization:"Bearer "+t},body:JSON.stringify({quantity:next})});
+   await refreshDbCart();
+ }else{if(next===0)delete cart[id];else cart[id]=next;saveCart();}
+}
+async function removeCart(id){
+ const t=token();
+ if(t){await fetch("/api/cart/items/"+encodeURIComponent(id),{method:"DELETE",headers:{Authorization:"Bearer "+t}});await refreshDbCart();}
+ else{delete cart[id];saveCart();}
+}
 function toggleCart(force){if(force===true){$("cart").classList.add("open");return;}$("cart").classList.toggle("open");}
 async function checkout(){
  const token=localStorage.getItem("ffs_token");if(!token){alert("Please login first.");location.href="login.html?next=marketplace.html";return;}
  const items=Object.entries(cart).map(([productId,quantity])=>({productId:Number(productId),quantity}));
  if(!items.length){$("cartMsg").textContent="Cart is empty.";return;}
- const r=await fetch("/api/orders",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({items})});
+ const r=await fetch("/api/orders",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({})});
  const d=await r.json();if(!r.ok){$("cartMsg").textContent=d.error||"Unable to place order.";return;}
  cart={};localStorage.removeItem("ks_cart");updateCart();$("cartMsg").textContent="Order #"+d.order.id+" placed successfully.";setTimeout(()=>location.href="dashboard.html",1200);
 }
