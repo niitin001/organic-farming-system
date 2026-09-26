@@ -147,13 +147,11 @@ async function removeCart(id){
  else{delete cart[id];saveCart();}
 }
 function toggleCart(force){if(force===true){$("cart").classList.add("open");return;}$("cart").classList.toggle("open");}
-async function checkout(){
- const token=localStorage.getItem("ffs_token");if(!token){alert("Please login first.");location.href="login.html?next=marketplace.html";return;}
- const items=Object.entries(cart).map(([productId,quantity])=>({productId:Number(productId),quantity}));
- if(!items.length){$("cartMsg").textContent="Cart is empty.";return;}
- const r=await fetch("/api/orders",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({})});
- const d=await r.json();if(!r.ok){$("cartMsg").textContent=d.error||"Unable to place order.";return;}
- cart={};localStorage.removeItem("ks_cart");updateCart();$("cartMsg").textContent="Order #"+d.order.id+" placed successfully.";setTimeout(()=>location.href="dashboard.html",1200);
+function checkout(){
+ const t=localStorage.getItem("ffs_token");
+ if(!t){location.href="login.html?next=checkout.html";return;}
+ if(!Object.keys(cart).length){$("cartMsg").textContent="Cart is empty.";return;}
+ location.href="checkout.html";
 }
 ["search","citySide"].forEach(id=>$(id).addEventListener("input",load));$("category").addEventListener("change",load);$("sort").addEventListener("change",load);$("categoryList").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>setCategory(b.dataset.cat)));load();
 </script>
