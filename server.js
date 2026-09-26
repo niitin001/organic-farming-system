@@ -522,7 +522,7 @@ app.post("/api/cart/sync",requireAuth,async(req,res)=>{
       if(!p.rows[0]||p.rows[0].stock<1)continue;
       const qty=Math.min(item.quantity,p.rows[0].stock);
       await client.query(`INSERT INTO cart_items (user_id,product_id,quantity) VALUES ($1,$2,$3)
-        ON CONFLICT (user_id,product_id) DO UPDATE SET quantity=LEAST(cart_items.quantity + EXCLUDED.quantity,$3),updated_at=NOW()`,[req.auth.id,item.productId,qty]);
+        ON CONFLICT (user_id,product_id) DO UPDATE SET quantity=LEAST(cart_items.quantity + EXCLUDED.quantity,(SELECT stock FROM products WHERE id=EXCLUDED.product_id)),updated_at=NOW()`,[req.auth.id,item.productId,qty]);
     }
     await client.query("COMMIT");
     const {rows}=await pool.query("SELECT product_id AS \"productId\",quantity FROM cart_items WHERE user_id=$1",[req.auth.id]);
@@ -536,7 +536,7 @@ app.post("/api/cart/items",requireAuth,async(req,res)=>{
   if(!rows[0])return res.status(404).json({error:"Product not found."});
   if(rows[0].stock<quantity)return res.status(409).json({error:"Not enough stock available."});
   await pool.query(`INSERT INTO cart_items (user_id,product_id,quantity) VALUES ($1,$2,$3)
-    ON CONFLICT (user_id,product_id) DO UPDATE SET quantity=LEAST(cart_items.quantity + EXCLUDED.quantity,$3),updated_at=NOW()`,[req.auth.id,productId,quantity]);
+    ON CONFLICT (user_id,product_id) DO UPDATE SET quantity=LEAST(cart_items.quantity + EXCLUDED.quantity,(SELECT stock FROM products WHERE id=EXCLUDED.product_id)),updated_at=NOW()`,[req.auth.id,productId,quantity]);
   res.status(201).json({message:"Cart updated."});
 });
 app.patch("/api/cart/items/:productId",requireAuth,async(req,res)=>{
