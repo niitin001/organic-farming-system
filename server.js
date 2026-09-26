@@ -117,6 +117,7 @@ async function initDatabase() {
     CREATE TABLE IF NOT EXISTS products (id SERIAL PRIMARY KEY,name VARCHAR(160) NOT NULL,category VARCHAR(80),price NUMERIC(10,2) NOT NULL DEFAULT 0,stock INTEGER NOT NULL DEFAULT 0,image TEXT,seller_id INTEGER REFERENCES seller_profiles(id) ON DELETE SET NULL);
     CREATE TABLE IF NOT EXISTS orders (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,total_amount NUMERIC(10,2) NOT NULL DEFAULT 0,status VARCHAR(40) NOT NULL DEFAULT 'pending',created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS order_items (id SERIAL PRIMARY KEY,order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,product_id INTEGER NOT NULL REFERENCES products(id),quantity INTEGER NOT NULL CHECK (quantity > 0));
+    CREATE TABLE IF NOT EXISTS cart_items (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,quantity INTEGER NOT NULL CHECK (quantity > 0),created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE(user_id,product_id));
     CREATE TABLE IF NOT EXISTS seller_orders (id SERIAL PRIMARY KEY,order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,seller_id INTEGER NOT NULL REFERENCES seller_profiles(id) ON DELETE CASCADE,status VARCHAR(30) NOT NULL DEFAULT 'pending',seller_total NUMERIC(10,2) NOT NULL DEFAULT 0,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE(order_id,seller_id));
     CREATE TABLE IF NOT EXISTS contacts (id SERIAL PRIMARY KEY,user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,message TEXT NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS saved_crops (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,crop_id INTEGER NOT NULL REFERENCES crops(id) ON DELETE CASCADE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE(user_id,crop_id));    CREATE TABLE IF NOT EXISTS farm_tasks (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,crop_name VARCHAR(120) NOT NULL,sowing_date DATE NOT NULL,task_title VARCHAR(180) NOT NULL,task_type VARCHAR(80) NOT NULL,due_date DATE NOT NULL,status VARCHAR(30) NOT NULL DEFAULT 'pending',created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
@@ -500,12 +501,76 @@ app.patch("/api/admin/seller-documents/:id",requireAuth,requireAdmin,async(req,r
   const {rows}=await pool.query("UPDATE seller_documents SET status=$1,admin_note=$2,reviewed_at=NOW() WHERE id=$3 RETURNING id,document_type,document_name,status,admin_note,reviewed_at",[status,note,id]);
   if(!rows[0])return res.status(404).json({error:"Document not found."}); res.json({document:rows[0]});
 });
-app.post("/api/orders",requireAuth,async(req,res)=>{
+app.get("/api/cart",requireAuth,async(req,res)=>{
+  const {rows}=await pool.query(`SELECT ci.product_id AS "productId",ci.quantity,p.name,p.category,p.price,p.stock,p.image,p.seller_id,
+    COALESCE(sp.store_name,'KisanSetu Direct') AS seller_name,COALESCE(sp.city,'Platform') AS seller_city,
+    CASE WHEN sp.status='approved' THEN true ELSE false END AS seller_verified
+    FROM cart_items ci JOIN products p ON p.id=ci.product_id
+    LEFT JOIN seller_profiles sp ON sp.id=p.seller_id
+    WHERE ci.user_id=$1 ORDER BY ci.created_at DESC`,[req.auth.id]);
+  res.json({items:rows});
+});
+app.post("/api/cart/sync",requireAuth,async(req,res)=>{
   const items=Array.isArray(req.body?.items)?req.body.items:[];
-  const clean=items.map(i=>({productId:Number(i.productId),quantity:Number(i.quantity)})).filter(i=>Number.isInteger(i.productId)&&Number.isInteger(i.quantity)&&i.quantity>0);
-  if(!clean.length)return res.status(400).json({error:"Cart is empty."});
+  const clean=items.map(i=>({productId:Number(i.productId),quantity:Number(i.quantity)}))
+    .filter(i=>Number.isInteger(i.productId)&&Number.isInteger(i.quantity)&&i.quantity>0);
+  const client=await pool.connect();
+  try{
+    await client.query("BEGIN");
+    for(const item of clean){
+      const p=await client.query("SELECT id,stock FROM products WHERE id=$1",[item.productId]);
+      if(!p.rows[0]||p.rows[0].stock<1)continue;
+      const qty=Math.min(item.quantity,p.rows[0].stock);
+      await client.query(`INSERT INTO cart_items (user_id,product_id,quantity) VALUES ($1,$2,$3)
+        ON CONFLICT (user_id,product_id) DO UPDATE SET quantity=LEAST(cart_items.quantity + EXCLUDED.quantity,$3),updated_at=NOW()`,[req.auth.id,item.productId,qty]);
+    }
+    await client.query("COMMIT");
+    const {rows}=await pool.query("SELECT product_id AS \"productId\",quantity FROM cart_items WHERE user_id=$1",[req.auth.id]);
+    res.json({items:rows});
+  }catch(error){await client.query("ROLLBACK");console.error(error);res.status(500).json({error:"Unable to sync cart."});}finally{client.release();}
+});
+app.post("/api/cart/items",requireAuth,async(req,res)=>{
+  const productId=Number(req.body?.productId),quantity=Number(req.body?.quantity);
+  if(!Number.isInteger(productId)||!Number.isInteger(quantity)||quantity<1)return res.status(400).json({error:"Valid productId and quantity are required."});
+  const {rows}=await pool.query("SELECT stock FROM products WHERE id=$1",[productId]);
+  if(!rows[0])return res.status(404).json({error:"Product not found."});
+  if(rows[0].stock<quantity)return res.status(409).json({error:"Not enough stock available."});
+  await pool.query(`INSERT INTO cart_items (user_id,product_id,quantity) VALUES ($1,$2,$3)
+    ON CONFLICT (user_id,product_id) DO UPDATE SET quantity=LEAST(cart_items.quantity + EXCLUDED.quantity,$3),updated_at=NOW()`,[req.auth.id,productId,quantity]);
+  res.status(201).json({message:"Cart updated."});
+});
+app.patch("/api/cart/items/:productId",requireAuth,async(req,res)=>{
+  const productId=Number(req.params.productId),quantity=Number(req.body?.quantity);
+  if(!Number.isInteger(productId)||!Number.isInteger(quantity)||quantity<1)return res.status(400).json({error:"Quantity must be at least 1."});
+  const {rows}=await pool.query("SELECT stock FROM products WHERE id=$1",[productId]);
+  if(!rows[0])return res.status(404).json({error:"Product not found."});
+  if(rows[0].stock<quantity)return res.status(409).json({error:"Not enough stock available."});
+  const updated=await pool.query("UPDATE cart_items SET quantity=$1,updated_at=NOW() WHERE user_id=$2 AND product_id=$3 RETURNING product_id AS \"productId\",quantity",[quantity,req.auth.id,productId]);
+  if(!updated.rows[0])return res.status(404).json({error:"Cart item not found."});
+  res.json({item:updated.rows[0]});
+});
+app.delete("/api/cart/items/:productId",requireAuth,async(req,res)=>{
+  const productId=Number(req.params.productId);
+  if(!Number.isInteger(productId))return res.status(400).json({error:"Invalid product id."});
+  await pool.query("DELETE FROM cart_items WHERE user_id=$1 AND product_id=$2",[req.auth.id,productId]);
+  res.json({deleted:true});
+});
+app.delete("/api/cart",requireAuth,async(req,res)=>{
+  await pool.query("DELETE FROM cart_items WHERE user_id=$1",[req.auth.id]);
+  res.json({cleared:true});
+});
+
+app.post("/api/orders",requireAuth,async(req,res)=>{
+  const supplied=Array.isArray(req.body?.items)?req.body.items:null;
+  let clean=(supplied===null?[]:supplied).map(i=>({productId:Number(i.productId),quantity:Number(i.quantity)}))
+    .filter(i=>Number.isInteger(i.productId)&&Number.isInteger(i.quantity)&&i.quantity>0);
   const client=await pool.connect();
   try{await client.query("BEGIN");
+    if(supplied===null){
+      const saved=await client.query("SELECT product_id AS \"productId\",quantity FROM cart_items WHERE user_id=$1 FOR UPDATE",[req.auth.id]);
+      clean=saved.rows.map(i=>({productId:Number(i.productId),quantity:Number(i.quantity)}));
+    }
+    if(!clean.length)throw Object.assign(new Error("Cart is empty."),{status:400});
     let total=0; const verified=[];
     for(const item of clean){
       const {rows}=await client.query("SELECT p.id,p.name,p.price,p.stock,p.seller_id,sp.store_name FROM products p LEFT JOIN seller_profiles sp ON sp.id=p.seller_id WHERE p.id=$1 FOR UPDATE",[item.productId]);
@@ -518,6 +583,7 @@ app.post("/api/orders",requireAuth,async(req,res)=>{
     const sellerGroups=new Map();
     for(const item of verified){if(item.sellerId){if(!sellerGroups.has(item.sellerId))sellerGroups.set(item.sellerId,[]);sellerGroups.get(item.sellerId).push(item);} await client.query("INSERT INTO order_items (order_id,product_id,quantity) VALUES ($1,$2,$3)",[order.rows[0].id,item.productId,item.quantity]); await client.query("UPDATE products SET stock=stock-$1 WHERE id=$2",[item.quantity,item.productId]);}
     for(const [sellerId,group] of sellerGroups){const sellerTotal=group.reduce((sum,item)=>sum+item.price*item.quantity,0);const so=await client.query("INSERT INTO seller_orders (order_id,seller_id,status,seller_total) VALUES ($1,$2,'pending',$3) RETURNING id",[order.rows[0].id,sellerId,sellerTotal]);for(const item of group)await client.query("UPDATE order_items SET seller_order_id=$1 WHERE order_id=$2 AND product_id=$3",[so.rows[0].id,order.rows[0].id,item.productId]);}
+    await client.query("DELETE FROM cart_items WHERE user_id=$1",[req.auth.id]);
     await client.query("COMMIT");res.status(201).json({order:order.rows[0]});
   }catch(error){await client.query("ROLLBACK");console.error(error);res.status(error.status||500).json({error:error.message||"Unable to place order."});}finally{client.release();}
 });
