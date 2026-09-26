@@ -562,6 +562,14 @@ app.delete("/api/cart",requireAuth,async(req,res)=>{
 
 app.post("/api/orders",requireAuth,async(req,res)=>{
   const supplied=Array.isArray(req.body?.items)?req.body.items:null;
+  const deliveryAddress=String(req.body?.deliveryAddress||"").trim().slice(0,500);
+  const deliveryPhone=String(req.body?.deliveryPhone||"").trim();
+  const fulfillmentMethod=String(req.body?.fulfillmentMethod||"delivery").trim().toLowerCase();
+  const paymentMethod=String(req.body?.paymentMethod||"cod").trim().toLowerCase();
+  if(!["delivery","pickup"].includes(fulfillmentMethod))return res.status(400).json({error:"Invalid fulfillment method."});
+  if(!["cod","demo_upi","demo_card"].includes(paymentMethod))return res.status(400).json({error:"Invalid payment method."});
+  if(fulfillmentMethod==="delivery" && (!deliveryAddress || !/^\d{10}$/.test(deliveryPhone)))return res.status(400).json({error:"Delivery address and valid 10-digit phone are required."});
+  if(fulfillmentMethod==="pickup" && deliveryPhone && !/^\d{10}$/.test(deliveryPhone))return res.status(400).json({error:"Enter a valid 10-digit phone number."});
   let clean=(supplied===null?[]:supplied).map(i=>({productId:Number(i.productId),quantity:Number(i.quantity)}))
     .filter(i=>Number.isInteger(i.productId)&&Number.isInteger(i.quantity)&&i.quantity>0);
   const client=await pool.connect();
@@ -579,7 +587,8 @@ app.post("/api/orders",requireAuth,async(req,res)=>{
       if(rows[0].stock<item.quantity)throw Object.assign(new Error("Not enough stock for "+rows[0].name+"."),{status:409});
       total+=Number(rows[0].price)*item.quantity; verified.push({...item,price:Number(rows[0].price),sellerId:rows[0].seller_id});
     }
-    const order=await client.query("INSERT INTO orders (user_id,total_amount,status) VALUES ($1,$2,'pending') RETURNING id,total_amount,status,created_at",[req.auth.id,total]);
+    const paymentStatus=paymentMethod==="cod" ? "pending" : "demo_paid";
+    const order=await client.query("INSERT INTO orders (user_id,total_amount,status,delivery_address,delivery_phone,fulfillment_method,payment_method,payment_status) VALUES ($1,$2,'pending',$3,$4,$5,$6,$7) RETURNING id,total_amount,status,delivery_address,delivery_phone,fulfillment_method,payment_method,payment_status,created_at",[req.auth.id,total,deliveryAddress||null,deliveryPhone||null,fulfillmentMethod,paymentMethod,paymentStatus]);
     const sellerGroups=new Map();
     for(const item of verified){if(item.sellerId){if(!sellerGroups.has(item.sellerId))sellerGroups.set(item.sellerId,[]);sellerGroups.get(item.sellerId).push(item);} await client.query("INSERT INTO order_items (order_id,product_id,quantity) VALUES ($1,$2,$3)",[order.rows[0].id,item.productId,item.quantity]); await client.query("UPDATE products SET stock=stock-$1 WHERE id=$2",[item.quantity,item.productId]);}
     for(const [sellerId,group] of sellerGroups){const sellerTotal=group.reduce((sum,item)=>sum+item.price*item.quantity,0);const so=await client.query("INSERT INTO seller_orders (order_id,seller_id,status,seller_total) VALUES ($1,$2,'pending',$3) RETURNING id",[order.rows[0].id,sellerId,sellerTotal]);for(const item of group)await client.query("UPDATE order_items SET seller_order_id=$1 WHERE order_id=$2 AND product_id=$3",[so.rows[0].id,order.rows[0].id,item.productId]);}
