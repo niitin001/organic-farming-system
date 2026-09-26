@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Checkout | KisanSetu Marketplace</title><link rel="stylesheet" href="styles.css">
+<style>
+body{background:#f5faf6}.checkout-wrap{max-width:1100px;margin:100px auto 60px;padding:0 20px}.checkout-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}.card{background:#fff;border:1px solid #dfeae1;border-radius:22px;padding:24px;box-shadow:0 8px 28px rgba(20,60,35,.05)}h1{margin:0 0 7px;color:#173f2d}h2{margin:0 0 16px;color:#173f2d}.muted{color:#68756c}.field{margin:0 0 14px}.field label{display:block;font-weight:800;font-size:.85rem;margin-bottom:6px}.field input,.field textarea,.field select{width:100%;box-sizing:border-box;padding:12px 13px;border:1px solid #d8e5da;border-radius:12px;font:inherit}.field textarea{min-height:90px;resize:vertical}.choice{display:grid;grid-template-columns:1fr 1fr;gap:10px}.choice label{border:1px solid #d8e5da;border-radius:14px;padding:13px;cursor:pointer}.choice input{margin-right:7px}.choice label:has(input:checked){border-color:#4f9660;background:#f0f8f2}.summary-item{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid #edf2ee}.total{font-size:1.25rem;font-weight:900;display:flex;justify-content:space-between;margin-top:15px}.btn{width:100%;border:0;border-radius:13px;background:#216535;color:#fff;padding:14px;font-weight:900;font-size:1rem;cursor:pointer;margin-top:16px}.btn:disabled{opacity:.6;cursor:not-allowed}.notice{padding:12px 14px;border-radius:12px;background:#f0f8f2;color:#49634f;font-size:.84rem;margin-top:14px}.error{color:#b3261e;background:#fff1ef;border:1px solid #ffd6d1;padding:11px;border-radius:11px;margin-top:12px}.success{color:#1c6a35;background:#eef9f0;border:1px solid #cfe8d3;padding:11px;border-radius:11px;margin-top:12px}@media(max-width:760px){.checkout-grid{grid-template-columns:1fr}.checkout-wrap{margin-top:88px}}
+</style></head><body>
+<nav class="navbar"><a href="index.html" class="brand">🌱 KisanSetu</a><div class="nav-links"><a href="marketplace.html">Marketplace</a><a href="dashboard.html">Dashboard</a></div></nav>
+<main class="checkout-wrap"><div style="margin-bottom:18px"><span class="muted">Marketplace → Checkout</span><h1>Complete your order</h1><p class="muted">Choose delivery or pickup and select a demo payment method. No real payment is processed.</p></div>
+<div class="checkout-grid">
+<section class="card"><h2>📍 Delivery details</h2>
+<div class="choice"><label><input type="radio" name="fulfillment" value="delivery" checked> 🚚 Home delivery</label><label><input type="radio" name="fulfillment" value="pickup"> 🏪 Seller pickup</label></div>
+<div class="field" style="margin-top:15px"><label for="address">Delivery address</label><textarea id="address" placeholder="Village / street / landmark / district"></textarea></div>
+<div class="field"><label for="phone">Mobile number</label><input id="phone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number"></div>
+<h2 style="margin-top:24px">💳 Payment</h2>
+<div class="choice"><label><input type="radio" name="payment" value="cod" checked> Cash on Delivery</label><label><input type="radio" name="payment" value="demo_upi"> UPI (Demo)</label><label><input type="radio" name="payment" value="demo_card"> Card (Demo)</label></div>
+<div class="notice">🔒 COD creates a normal pending order. UPI/Card options only simulate successful payment; connect a real gateway later for production payments.</div>
+<div id="msg"></div><button class="btn" id="place" onclick="placeOrder()">Place Order</button>
+</section>
+<aside class="card"><h2>🛒 Order summary</h2><div id="items"></div><div class="total"><span>Total</span><span id="total">₹0</span></div><p class="muted" style="font-size:.82rem">Seller-wise fulfilment remains linked to your order.</p></aside>
+</div></main>
+<script>
+const token=localStorage.getItem("ffs_token");if(!token){location.href="login.html?next=checkout.html";}
+let cart=[];
+const money=n=>"₹"+Number(n).toLocaleString("en-IN",{maximumFractionDigits:2});
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+async function load(){
+ const r=await fetch("/api/cart",{headers:{Authorization:"Bearer "+token}});if(!r.ok){location.href="marketplace.html";return;}
+ const d=await r.json();cart=d.items||[];render();
+}
+function render(){
+ if(!cart.length){document.getElementById("items").innerHTML="<p class='muted'>Your cart is empty. <a href='marketplace.html'>Return to marketplace</a>.</p>";document.getElementById("place").disabled=true;return;}
+ let total=0;document.getElementById("items").innerHTML=cart.map(i=>{total+=Number(i.price)*Number(i.quantity);return "<div class='summary-item'><span><strong>"+esc(i.name)+"</strong><br><small>"+i.quantity+" × "+money(i.price)+"</small></span><strong>"+money(Number(i.price)*Number(i.quantity))+"</strong></div>"}).join("");document.getElementById("total").textContent=money(total);
+}
+document.querySelectorAll('input[name="fulfillment"]').forEach(x=>x.addEventListener("change",()=>{document.getElementById("address").required=x.checked&&x.value==="delivery";document.getElementById("phone").required=x.checked&&x.value==="delivery";}));
+async function placeOrder(){
+ const msg=document.getElementById("msg"),btn=document.getElementById("place");msg.innerHTML="";
+ const fulfillment=document.querySelector('input[name="fulfillment"]:checked').value,payment=document.querySelector('input[name="payment"]:checked').value;
+ const address=document.getElementById("address").value.trim(),phone=document.getElementById("phone").value.trim();
+ if(fulfillment==="delivery"&&(!address||!/^d{10}$/.test(phone))){msg.innerHTML="<div class='error'>Delivery ke liye address aur valid 10-digit mobile number required hai.</div>";return;}
+ if(phone&&!/^d{10}$/.test(phone)){msg.innerHTML="<div class='error'>Mobile number 10 digits ka hona chahiye.</div>";return;}
+ btn.disabled=true;btn.textContent="Placing order…";
+ try{
+  const r=await fetch("/api/orders",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({deliveryAddress:address,deliveryPhone:phone,fulfillmentMethod:fulfillment,paymentMethod:payment})});
+  const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to place order.");
+  msg.innerHTML="<div class='success'>✅ Order #"+d.order.id+" placed successfully.</div>";setTimeout(()=>location.href="dashboard.html",900);
+ }catch(e){msg.innerHTML="<div class='error'>"+esc(e.message)+"</div>";btn.disabled=false;btn.textContent="Place Order";}
+}
+load();
+</script></body></html>
