@@ -5,7 +5,7 @@
 body{background:#f5faf6}.checkout-wrap{max-width:1100px;margin:100px auto 60px;padding:0 20px}.checkout-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}.card{background:#fff;border:1px solid #dfeae1;border-radius:22px;padding:24px;box-shadow:0 8px 28px rgba(20,60,35,.05)}h1{margin:0 0 7px;color:#173f2d}h2{margin:0 0 16px;color:#173f2d}.muted{color:#68756c}.field{margin:0 0 14px}.field label{display:block;font-weight:800;font-size:.85rem;margin-bottom:6px}.field input,.field textarea,.field select{width:100%;box-sizing:border-box;padding:12px 13px;border:1px solid #d8e5da;border-radius:12px;font:inherit}.field textarea{min-height:90px;resize:vertical}.choice{display:grid;grid-template-columns:1fr 1fr;gap:10px}.choice label{border:1px solid #d8e5da;border-radius:14px;padding:13px;cursor:pointer}.choice input{margin-right:7px}.choice label:has(input:checked){border-color:#4f9660;background:#f0f8f2}.summary-item{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid #edf2ee}.total{font-size:1.25rem;font-weight:900;display:flex;justify-content:space-between;margin-top:15px}.btn{width:100%;border:0;border-radius:13px;background:#216535;color:#fff;padding:14px;font-weight:900;font-size:1rem;cursor:pointer;margin-top:16px}.btn:disabled{opacity:.6;cursor:not-allowed}.notice{padding:12px 14px;border-radius:12px;background:#f0f8f2;color:#49634f;font-size:.84rem;margin-top:14px}.error{color:#b3261e;background:#fff1ef;border:1px solid #ffd6d1;padding:11px;border-radius:11px;margin-top:12px}.success{color:#1c6a35;background:#eef9f0;border:1px solid #cfe8d3;padding:11px;border-radius:11px;margin-top:12px}@media(max-width:760px){.checkout-grid{grid-template-columns:1fr}.checkout-wrap{margin-top:88px}}
 </style></head><body>
 <nav class="navbar"><a href="index.html" class="brand">🌱 KisanSetu</a><div class="nav-links"><a href="marketplace.html">Marketplace</a><a href="dashboard.html">Dashboard</a></div></nav>
-<main class="checkout-wrap"><div style="margin-bottom:18px"><span class="muted">Marketplace → Checkout</span><h1>Complete your order</h1><p class="muted">Choose delivery or pickup and select a demo payment method. No real payment is processed.</p></div>
+<main class="checkout-wrap"><div style="margin-bottom:18px"><span class="muted">Marketplace → Checkout</span><h1>Complete your order</h1><p class="muted">Choose delivery or pickup and pay securely. COD remains available, and Razorpay can handle real UPI/card payments when configured.</p></div>
 <div class="checkout-grid">
 <section class="card"><h2>📍 Delivery details</h2>
 <div class="choice"><label><input type="radio" name="fulfillment" value="delivery" checked> 🚚 Home delivery</label><label><input type="radio" name="fulfillment" value="pickup"> 🏪 Seller pickup</label></div>
@@ -13,8 +13,8 @@ body{background:#f5faf6}.checkout-wrap{max-width:1100px;margin:100px auto 60px;p
 <div class="field" style="margin-top:15px"><label for="address">Delivery address</label><textarea id="address" placeholder="Village / street / landmark / district"></textarea></div>
 <div class="field"><label for="phone">Mobile number</label><input id="phone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number"></div>
 <h2 style="margin-top:24px">💳 Payment</h2>
-<div class="choice"><label><input type="radio" name="payment" value="cod" checked> Cash on Delivery</label><label><input type="radio" name="payment" value="demo_upi"> UPI (Demo)</label><label><input type="radio" name="payment" value="demo_card"> Card (Demo)</label></div>
-<div class="notice">🔒 COD creates a normal pending order. UPI/Card options only simulate successful payment; connect a real gateway later for production payments.</div>
+<div class="choice"><label><input type="radio" name="payment" value="cod" checked> Cash on Delivery</label><label><input type="radio" name="payment" value="demo_upi"> UPI (Demo)</label><label><input type="radio" name="payment" value="demo_card"> Card (Demo)</label><label><input type="radio" name="payment" value="razorpay"> Razorpay (UPI / Card)</label></div>
+<div class="notice" id="paymentNotice">🔒 COD creates a normal pending order. Demo UPI/Card only simulate payment. Razorpay opens the secure gateway when Test/Live keys are configured on the server.</div>
 <div id="msg"></div><button class="btn" id="place" onclick="placeOrder()">Place Order</button>
 </section>
 <aside class="card"><h2>🛒 Order summary</h2><div id="items"></div><div class="total"><span>Total</span><span id="total">₹0</span></div><p class="muted" style="font-size:.82rem">Seller-wise fulfilment remains linked to your order.</p></aside>
@@ -39,12 +39,33 @@ async function placeOrder(){
  const address=document.getElementById("address").value.trim(),phone=document.getElementById("phone").value.trim();
  if(fulfillment==="delivery"&&(!address||!/^\d{10}$/.test(phone))){msg.innerHTML="<div class='error'>Delivery ke liye address aur valid 10-digit mobile number required hai.</div>";return;}
  if(phone&&!/^\d{10}$/.test(phone)){msg.innerHTML="<div class='error'>Mobile number 10 digits ka hona chahiye.</div>";return;}
- btn.disabled=true;btn.textContent="Placing order…";
+ btn.disabled=true;btn.textContent=payment==="razorpay"?"Opening payment…":"Placing order…";
  try{
-  const r=await fetch("/api/orders",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({deliveryAddress:address,deliveryPhone:phone,fulfillmentMethod:fulfillment,paymentMethod:payment})});
-  const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to place order.");
-  if(d.pickupDetails?.length){msg.innerHTML="<div class='success'>✅ Order #"+d.order.id+" placed. Pickup E-token(s): "+d.pickupDetails.map(x=>"<strong>"+esc(x.token)+"</strong> • OTP <strong>"+esc(x.otp)+"</strong>").join(" &nbsp; | &nbsp; ")+"<br><small>These codes are also saved in your Farmer Dashboard.</small></div>";}else{msg.innerHTML="<div class='success'>✅ Order #"+d.order.id+" placed successfully.</div>";}setTimeout(()=>location.href="dashboard.html",2200);
+   if(payment==="razorpay"){await startRazorpayPayment({fulfillment,address,phone,btn,msg});return;}
+   const r=await fetch("/api/orders",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({deliveryAddress:address,deliveryPhone:phone,fulfillmentMethod:fulfillment,paymentMethod:payment})});
+   const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to place order.");showOrderSuccess(d,msg);
  }catch(e){msg.innerHTML="<div class='error'>"+esc(e.message)+"</div>";btn.disabled=false;btn.textContent="Place Order";}
+}
+async function startRazorpayPayment({fulfillment,address,phone,btn,msg}){
+ const configResponse=await fetch("/api/payments/config",{headers:{Authorization:"Bearer "+token}});
+ const config=await configResponse.json();if(!configResponse.ok||!config.enabled)throw new Error("Razorpay is not configured yet. Add the Razorpay Test/Live keys in Render first.");
+ const orderResponse=await fetch("/api/payments/razorpay/order",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({deliveryAddress:address,deliveryPhone:phone,fulfillmentMethod:fulfillment})});
+ const gateway=await orderResponse.json();if(!orderResponse.ok)throw new Error(gateway.error||"Unable to start Razorpay payment.");
+ if(typeof Razorpay==="undefined")throw new Error("Razorpay Checkout could not load. Please refresh and try again.");
+ const rzp=new Razorpay({key:gateway.keyId,amount:gateway.amount,currency:gateway.currency,name:"Organic Farming System",description:"Marketplace order payment",order_id:gateway.orderId,prefill:{contact:phone?"+91"+phone:""},theme:{color:"#216535"},handler:async response=>{
+   try{
+     btn.textContent="Verifying payment…";
+     const r=await fetch("/api/orders",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({deliveryAddress:address,deliveryPhone:phone,fulfillmentMethod:fulfillment,paymentMethod:"razorpay",razorpayOrderId:response.razorpay_order_id,razorpayPaymentId:response.razorpay_payment_id,razorpaySignature:response.razorpay_signature})});
+     const d=await r.json();if(!r.ok)throw new Error(d.error||"Payment verification failed.");showOrderSuccess(d,msg);
+   }catch(e){msg.innerHTML="<div class='error'>"+esc(e.message)+"</div>";btn.disabled=false;btn.textContent="Place Order";}
+ },modal: {ondismiss: function(){btn.disabled=false;btn.textContent="Place Order";}});
+ rzp.on("payment.failed",function(response){const description=response.error?.description||"Payment failed.";msg.innerHTML="<div class='error'>"+esc(description)+" Please retry or choose another payment method.</div>";btn.disabled=false;btn.textContent="Place Order";});
+ rzp.open();
+}
+function showOrderSuccess(d,msg){
+ if(d.pickupDetails?.length){msg.innerHTML="<div class='success'>✅ Order #"+d.order.id+" placed. Pickup E-token(s): "+d.pickupDetails.map(x=>"<strong>"+esc(x.token)+"</strong> • OTP <strong>"+esc(x.otp)+"</strong>").join(" &nbsp; | &nbsp; ")+"<br><small>These codes are also saved in your Farmer Dashboard.</small></div>";}
+ else{msg.innerHTML="<div class='success'>✅ Order #"+d.order.id+" placed successfully.</div>";}
+ setTimeout(()=>location.href="dashboard.html",2200);
 }
 load();
 </script></body></html>
