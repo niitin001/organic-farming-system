@@ -9,6 +9,7 @@ body{background:#f5faf6}.checkout-wrap{max-width:1100px;margin:100px auto 60px;p
 <div class="checkout-grid">
 <section class="card"><h2>📍 Delivery details</h2>
 <div class="choice"><label><input type="radio" name="fulfillment" value="delivery" checked> 🚚 Home delivery</label><label><input type="radio" name="fulfillment" value="pickup"> 🏪 Seller pickup</label></div>
+<div id="pickupInfo" class="notice" style="display:none">🏪 <strong>Pickup flow:</strong> each seller will prepare your items at their verified store. After placing the order, you will receive a seller-wise E-token and one-time pickup OTP in your dashboard.</div>
 <div class="field" style="margin-top:15px"><label for="address">Delivery address</label><textarea id="address" placeholder="Village / street / landmark / district"></textarea></div>
 <div class="field"><label for="phone">Mobile number</label><input id="phone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number"></div>
 <h2 style="margin-top:24px">💳 Payment</h2>
@@ -31,18 +32,18 @@ function render(){
  if(!cart.length){document.getElementById("items").innerHTML="<p class='muted'>Your cart is empty. <a href='marketplace.html'>Return to marketplace</a>.</p>";document.getElementById("place").disabled=true;return;}
  let total=0;document.getElementById("items").innerHTML=cart.map(i=>{total+=Number(i.price)*Number(i.quantity);return "<div class='summary-item'><span><strong>"+esc(i.name)+"</strong><br><small>"+i.quantity+" × "+money(i.price)+"</small></span><strong>"+money(Number(i.price)*Number(i.quantity))+"</strong></div>"}).join("");document.getElementById("total").textContent=money(total);
 }
-document.querySelectorAll('input[name="fulfillment"]').forEach(x=>x.addEventListener("change",()=>{document.getElementById("address").required=x.checked&&x.value==="delivery";document.getElementById("phone").required=x.checked&&x.value==="delivery";}));
+document.querySelectorAll('input[name="fulfillment"]').forEach(x=>x.addEventListener("change",()=>{const selected=document.querySelector('input[name="fulfillment"]:checked').value;const delivery=selected==="delivery";document.getElementById("address").required=delivery;document.getElementById("phone").required=delivery;document.getElementById("address").disabled=!delivery;document.getElementById("pickupInfo").style.display=delivery?"none":"block";if(!delivery)document.getElementById("address").value="";}));
 async function placeOrder(){
  const msg=document.getElementById("msg"),btn=document.getElementById("place");msg.innerHTML="";
  const fulfillment=document.querySelector('input[name="fulfillment"]:checked').value,payment=document.querySelector('input[name="payment"]:checked').value;
  const address=document.getElementById("address").value.trim(),phone=document.getElementById("phone").value.trim();
- if(fulfillment==="delivery"&&(!address||!/^d{10}$/.test(phone))){msg.innerHTML="<div class='error'>Delivery ke liye address aur valid 10-digit mobile number required hai.</div>";return;}
- if(phone&&!/^d{10}$/.test(phone)){msg.innerHTML="<div class='error'>Mobile number 10 digits ka hona chahiye.</div>";return;}
+ if(fulfillment==="delivery"&&(!address||!/^\d{10}$/.test(phone))){msg.innerHTML="<div class='error'>Delivery ke liye address aur valid 10-digit mobile number required hai.</div>";return;}
+ if(phone&&!/^\d{10}$/.test(phone)){msg.innerHTML="<div class='error'>Mobile number 10 digits ka hona chahiye.</div>";return;}
  btn.disabled=true;btn.textContent="Placing order…";
  try{
   const r=await fetch("/api/orders",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({deliveryAddress:address,deliveryPhone:phone,fulfillmentMethod:fulfillment,paymentMethod:payment})});
   const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to place order.");
-  msg.innerHTML="<div class='success'>✅ Order #"+d.order.id+" placed successfully.</div>";setTimeout(()=>location.href="dashboard.html",900);
+  if(d.pickupDetails?.length){msg.innerHTML="<div class='success'>✅ Order #"+d.order.id+" placed. Pickup E-token(s): "+d.pickupDetails.map(x=>"<strong>"+esc(x.token)+"</strong> • OTP <strong>"+esc(x.otp)+"</strong>").join(" &nbsp; | &nbsp; ")+"<br><small>These codes are also saved in your Farmer Dashboard.</small></div>";}else{msg.innerHTML="<div class='success'>✅ Order #"+d.order.id+" placed successfully.</div>";}setTimeout(()=>location.href="dashboard.html",2200);
  }catch(e){msg.innerHTML="<div class='error'>"+esc(e.message)+"</div>";btn.disabled=false;btn.textContent="Place Order";}
 }
 load();
