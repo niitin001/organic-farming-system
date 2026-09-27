@@ -743,6 +743,24 @@ app.patch("/api/admin/orders/:id",requireAuth,requireAdmin,async(req,res)=>{
   }catch(error){await client.query("ROLLBACK");console.error(error);res.status(error.status||500).json({error:error.message||"Unable to update order."});}
   finally{client.release();}
 });
+app.get("/api/admin/fulfillment",requireAuth,requireAdmin,async(_req,res)=>{
+  const {rows}=await pool.query(`SELECT
+    so.id AS seller_order_id,so.order_id,so.status,so.seller_total,so.created_at,
+    so.fulfillment_method,so.pickup_token,so.pickup_status,so.pickup_ready_at,so.picked_up_at,
+    sp.store_name,sp.city,sp.state,u.name AS customer_name,u.email AS customer_email,
+    o.payment_method,o.payment_status,
+    COALESCE(json_agg(json_build_object('name',p.name,'quantity',oi.quantity) ORDER BY p.name)
+      FILTER (WHERE p.id IS NOT NULL),'[]') AS items
+    FROM seller_orders so
+    JOIN seller_profiles sp ON sp.id=so.seller_id
+    JOIN orders o ON o.id=so.order_id
+    JOIN users u ON u.id=o.user_id
+    LEFT JOIN order_items oi ON oi.seller_order_id=so.id
+    LEFT JOIN products p ON p.id=oi.product_id
+    GROUP BY so.id,sp.store_name,sp.city,sp.state,u.name,u.email,o.payment_method,o.payment_status
+    ORDER BY so.created_at DESC LIMIT 300`);
+  res.json({orders:rows});
+});
 app.get("/api/admin/contacts",requireAuth,requireAdmin,async(_req,res)=>{
   const {rows}=await pool.query("SELECT id,user_id,message,created_at FROM contacts ORDER BY created_at DESC LIMIT 100");
   res.json({contacts:rows});
