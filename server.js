@@ -5,6 +5,7 @@ const path = require("path");
 const crypto = require("crypto");
 const cors = require("cors");
 const { Pool } = require("pg");
+const setupRazorpay = require("./razorpay");
 
 const PORT = Number(process.env.PORT || 3000);
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -23,7 +24,7 @@ const pool = new Pool({
 
 const allowedOrigin = process.env.FRONTEND_URL || null;
 app.use(cors(allowedOrigin ? { origin: allowedOrigin, credentials: true } : { origin: false }));
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "10mb", verify: (req, _res, buf) => { req.rawBody = Buffer.from(buf); } }));
 app.use(express.urlencoded({ extended: false }));
 app.use((req,res,next)=>{
   const p=req.path.toLowerCase();
@@ -575,6 +576,8 @@ app.delete("/api/cart",requireAuth,async(req,res)=>{
   await pool.query("DELETE FROM cart_items WHERE user_id=$1",[req.auth.id]);
   res.json({cleared:true});
 });
+
+setupRazorpay({app,pool,requireAuth});
 
 app.post("/api/orders",requireAuth,async(req,res)=>{
   const supplied=Array.isArray(req.body?.items)?req.body.items:null;
