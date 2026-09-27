@@ -105,6 +105,10 @@ async function createSignedStorageUrl(bucket,pathName,expiresIn=3600){
   if(!response.ok) throw new Error(`Unable to create secure document link: ${response.status}`);
   const data=await response.json(); return data.signedURL?.startsWith("http")?data.signedURL:`${SUPABASE_URL}${data.signedURL}`;
 }
+async function createNotification(client,{userId,type="order",title,body,orderId=null}){
+  await client.query("INSERT INTO notifications (user_id,type,title,body,order_id) VALUES ($1,$2,$3,$4,$5)",[userId,type,title,body,orderId]);
+}
+
 function escapeHtml(value){
   return String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
 }
@@ -123,6 +127,7 @@ async function initDatabase() {
     CREATE TABLE IF NOT EXISTS saved_crops (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,crop_id INTEGER NOT NULL REFERENCES crops(id) ON DELETE CASCADE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE(user_id,crop_id));    CREATE TABLE IF NOT EXISTS farm_tasks (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,crop_name VARCHAR(120) NOT NULL,sowing_date DATE NOT NULL,task_title VARCHAR(180) NOT NULL,task_type VARCHAR(80) NOT NULL,due_date DATE NOT NULL,status VARCHAR(30) NOT NULL DEFAULT 'pending',created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS product_reviews (id SERIAL PRIMARY KEY,product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,seller_order_id INTEGER NOT NULL REFERENCES seller_orders(id) ON DELETE CASCADE,rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),comment TEXT,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE(user_id,product_id,order_id));
     CREATE TABLE IF NOT EXISTS seller_documents (id SERIAL PRIMARY KEY,seller_id INTEGER NOT NULL REFERENCES seller_profiles(id) ON DELETE CASCADE,document_type VARCHAR(40) NOT NULL,document_name VARCHAR(180) NOT NULL,document_data TEXT NOT NULL,status VARCHAR(20) NOT NULL DEFAULT 'pending',admin_note TEXT,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),reviewed_at TIMESTAMPTZ);
+    CREATE TABLE IF NOT EXISTS notifications (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,type VARCHAR(40) NOT NULL DEFAULT 'order',title VARCHAR(180) NOT NULL,body TEXT NOT NULL,order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,read_at TIMESTAMPTZ,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
   `);
   await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'farmer'");
   await pool.query("ALTER TABLE products ADD COLUMN IF NOT EXISTS seller_id INTEGER REFERENCES seller_profiles(id) ON DELETE SET NULL");
@@ -593,6 +598,7 @@ app.post("/api/orders",requireAuth,async(req,res)=>{
     for(const item of verified){if(item.sellerId){if(!sellerGroups.has(item.sellerId))sellerGroups.set(item.sellerId,[]);sellerGroups.get(item.sellerId).push(item);} await client.query("INSERT INTO order_items (order_id,product_id,quantity) VALUES ($1,$2,$3)",[order.rows[0].id,item.productId,item.quantity]); await client.query("UPDATE products SET stock=stock-$1 WHERE id=$2",[item.quantity,item.productId]);}
     for(const [sellerId,group] of sellerGroups){const sellerTotal=group.reduce((sum,item)=>sum+item.price*item.quantity,0);const so=await client.query("INSERT INTO seller_orders (order_id,seller_id,status,seller_total) VALUES ($1,$2,'pending',$3) RETURNING id",[order.rows[0].id,sellerId,sellerTotal]);for(const item of group)await client.query("UPDATE order_items SET seller_order_id=$1 WHERE order_id=$2 AND product_id=$3",[so.rows[0].id,order.rows[0].id,item.productId]);}
     await client.query("DELETE FROM cart_items WHERE user_id=$1",[req.auth.id]);
+    await createNotification(client,{userId:req.auth.id,type:"order",title:"Order #"+order.rows[0].id+" placed",body:"Your order has been placed successfully. Current status: pending.",orderId:order.rows[0].id});
     await client.query("COMMIT");res.status(201).json({order:order.rows[0]});
   }catch(error){await client.query("ROLLBACK");console.error(error);res.status(error.status||500).json({error:error.message||"Unable to place order."});}finally{client.release();}
 });
@@ -617,6 +623,23 @@ app.post("/api/products/:id/reviews",requireAuth,async(req,res)=>{
     res.status(201).json({review:review.rows[0],message:"Review submitted."});
   }catch(error){if(error.code==="23505")return res.status(409).json({error:"You have already reviewed this product from this order."});console.error(error);res.status(500).json({error:"Unable to submit review."});}
 });
+app.get("/api/notifications",requireAuth,async(req,res)=>{
+  const limit=Math.min(Math.max(Number(req.query.limit)||30,1),100);
+  const {rows}=await pool.query("SELECT id,type,title,body,order_id,read_at,created_at FROM notifications WHERE user_id=$1 ORDER BY created_at DESC,id DESC LIMIT $2",[req.auth.id,limit]);
+  const unread=await pool.query("SELECT COUNT(*)::int AS count FROM notifications WHERE user_id=$1 AND read_at IS NULL",[req.auth.id]);
+  res.json({notifications:rows,unreadCount:unread.rows[0].count});
+});
+app.patch("/api/notifications/:id/read",requireAuth,async(req,res)=>{
+  const id=Number(req.params.id); if(!Number.isInteger(id)) return res.status(400).json({error:"Invalid notification id."});
+  const {rows}=await pool.query("UPDATE notifications SET read_at=COALESCE(read_at,NOW()) WHERE id=$1 AND user_id=$2 RETURNING id,read_at",[id,req.auth.id]);
+  if(!rows[0]) return res.status(404).json({error:"Notification not found."});
+  res.json({notification:rows[0]});
+});
+app.patch("/api/notifications/read-all",requireAuth,async(req,res)=>{
+  await pool.query("UPDATE notifications SET read_at=NOW() WHERE user_id=$1 AND read_at IS NULL",[req.auth.id]);
+  res.json({updated:true});
+});
+
 app.get("/api/orders",requireAuth,async(req,res)=>{
   const {rows}=await pool.query("SELECT o.id,o.total_amount,o.status,o.created_at,o.delivery_address,o.delivery_phone,o.fulfillment_method,o.payment_method,o.payment_status,COALESCE(json_agg(json_build_object('productId',p.id,'name',p.name,'quantity',oi.quantity,'price',p.price,'seller',COALESCE(sp.store_name,'KisanSetu Direct'),'sellerStatus',COALESCE(so.status,'pending'),'sellerOrderId',oi.seller_order_id) ORDER BY p.name) FILTER (WHERE p.id IS NOT NULL),'[]') AS items,COALESCE((SELECT json_agg(json_build_object('seller',sp2.store_name,'status',so2.status,'total',so2.seller_total) ORDER BY sp2.store_name) FROM seller_orders so2 JOIN seller_profiles sp2 ON sp2.id=so2.seller_id WHERE so2.order_id=o.id),'[]') AS seller_orders FROM orders o LEFT JOIN order_items oi ON oi.order_id=o.id LEFT JOIN products p ON p.id=oi.product_id LEFT JOIN seller_orders so ON so.id=oi.seller_order_id LEFT JOIN seller_profiles sp ON sp.id=p.seller_id WHERE o.user_id=$1 GROUP BY o.id ORDER BY o.created_at DESC",[req.auth.id]);
   res.json({orders:rows});
@@ -629,7 +652,7 @@ app.patch("/api/seller/orders/:id",requireAuth,requireSeller,async(req,res)=>{
   const id=Number(req.params.id),status=String(req.body?.status||"").trim().toLowerCase(),allowed=["pending","confirmed","packed","shipped","delivered","cancelled"];
   if(!Number.isInteger(id)||!allowed.includes(status))return res.status(400).json({error:"Invalid seller order status."});
   const client=await pool.connect();
-  try{await client.query("BEGIN");const current=await client.query("SELECT id,status FROM seller_orders WHERE id=$1 AND seller_id=$2 FOR UPDATE",[id,req.seller.id]);if(!current.rows[0])throw Object.assign(new Error("Seller order not found."),{status:404});if(current.rows[0].status==="cancelled"&&status!=="cancelled")throw Object.assign(new Error("Cancelled seller orders cannot be reopened."),{status:409});if(status==="cancelled"&&current.rows[0].status!=="cancelled"){const items=await client.query("SELECT product_id,quantity FROM order_items WHERE seller_order_id=$1",[id]);for(const item of items.rows)await client.query("UPDATE products SET stock=stock+$1 WHERE id=$2",[item.quantity,item.product_id]);}const updated=await client.query("UPDATE seller_orders SET status=$1 WHERE id=$2 RETURNING id,order_id,status,seller_total,created_at",[status,id]);await syncOrderStatus(client,updated.rows[0].order_id);await client.query("COMMIT");res.json({order:updated.rows[0]});}
+  try{await client.query("BEGIN");const current=await client.query("SELECT id,status FROM seller_orders WHERE id=$1 AND seller_id=$2 FOR UPDATE",[id,req.seller.id]);if(!current.rows[0])throw Object.assign(new Error("Seller order not found."),{status:404});if(current.rows[0].status==="cancelled"&&status!=="cancelled")throw Object.assign(new Error("Cancelled seller orders cannot be reopened."),{status:409});if(status==="cancelled"&&current.rows[0].status!=="cancelled"){const items=await client.query("SELECT product_id,quantity FROM order_items WHERE seller_order_id=$1",[id]);for(const item of items.rows)await client.query("UPDATE products SET stock=stock+$1 WHERE id=$2",[item.quantity,item.product_id]);}const updated=await client.query("UPDATE seller_orders SET status=$1 WHERE id=$2 RETURNING id,order_id,status,seller_total,created_at",[status,id]);await syncOrderStatus(client,updated.rows[0].order_id);const owner=await client.query("SELECT user_id,status FROM orders WHERE id=$1",[updated.rows[0].order_id]);if(owner.rows[0]){const overall=owner.rows[0].status;await createNotification(client,{userId:owner.rows[0].user_id,type:"order",title:"Order #"+updated.rows[0].order_id+" updated",body:"Seller order is now "+status+". Overall order status: "+overall+".",orderId:updated.rows[0].order_id});}await client.query("COMMIT");res.json({order:updated.rows[0]});}
   catch(error){await client.query("ROLLBACK");console.error(error);res.status(error.status||500).json({error:error.message||"Unable to update seller order."});}finally{client.release();}
 });
 
@@ -687,7 +710,8 @@ app.patch("/api/admin/orders/:id",requireAuth,requireAdmin,async(req,res)=>{
       const items=await client.query("SELECT oi.product_id,oi.quantity FROM order_items oi LEFT JOIN seller_orders so ON so.id=oi.seller_order_id WHERE oi.order_id=$1 AND COALESCE(so.status,'pending')<>'cancelled'",[id]);
       for(const item of items.rows)await client.query("UPDATE products SET stock=stock+$1 WHERE id=$2",[item.quantity,item.product_id]);
     }
-    const updated=await client.query("UPDATE orders SET status=$1 WHERE id=$2 RETURNING id,total_amount,status,created_at",[status,id]);if(status==="cancelled")await client.query("UPDATE seller_orders SET status='cancelled' WHERE order_id=$1 AND status<>'cancelled'",[id]);
+    const updated=await client.query("UPDATE orders SET status=$1 WHERE id=$2 RETURNING id,total_amount,status,created_at,user_id",[status,id]);if(status==="cancelled")await client.query("UPDATE seller_orders SET status='cancelled' WHERE order_id=$1 AND status<>'cancelled'",[id]);
+    if(current.rows[0].status!==status) await createNotification(client,{userId:updated.rows[0].user_id,type:"order",title:"Order #"+id+" updated",body:"Your order status is now "+status+".",orderId:id});
     await client.query("COMMIT");res.json({order:updated.rows[0]});
   }catch(error){await client.query("ROLLBACK");console.error(error);res.status(error.status||500).json({error:error.message||"Unable to update order."});}
   finally{client.release();}
